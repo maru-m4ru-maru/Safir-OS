@@ -6,8 +6,8 @@
 
   <title>SafirOS</title>
 
-  <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml">
-  <link rel="shortcut icon" href="favicon.svg?v=2">
+  <link rel="icon" href="favicon.svg?v=3" type="image/svg+xml">
+  <link rel="shortcut icon" href="favicon.svg?v=3">
 
   <style>
     html,
@@ -176,7 +176,7 @@
       const total =
         Number(
           response.headers.get("Content-Length")
-        ) || 512;
+        ) || 1024;
 
       if (!response.body) {
         const buffer =
@@ -235,16 +235,16 @@
         const size =
           imageBuffer.byteLength;
 
-        if (size !== 512) {
+        if (size !== 1024) {
           throw new Error(
-            "SafirOS.img のサイズが512バイトではありません。\n" +
+            "SafirOS.img のサイズが1024バイトではありません。\n" +
             "実際: " + size + " bytes"
           );
         }
 
         setStatus(
           "① SafirOS.img: HTTP 200 OK\n" +
-          "② サイズ: 512 bytes\n" +
+          "② サイズ: 1024 bytes\n" +
           "③ 読み込み完了\n" +
           "④ v86 を起動しています...",
           "ok"
@@ -287,7 +287,7 @@
 
         setStatus(
           "① SafirOS.img: HTTP 200 OK\n" +
-          "② サイズ: 512 bytes\n" +
+          "② サイズ: 1024 bytes\n" +
           "③ イメージ取得OK\n" +
           "④ v86 起動中...\n" +
           "⑤ SafirOS を起動しています...",
