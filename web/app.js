@@ -2,16 +2,20 @@
 
 const status = document.getElementById("status");
 const screenContainer = document.getElementById("screen_container");
+const progressBar = document.getElementById("progress_bar");
+const progressText = document.getElementById("progress_text");
 
 const EXPECTED_IMAGE_SIZE = 1474560;
 
-function setStatus(message, type = "") {
+function setStatus(message) {
   status.textContent = message;
-  status.className = "status";
+}
 
-  if (type) {
-    status.classList.add(type);
-  }
+function setProgress(percent) {
+  const value = Math.max(0, Math.min(100, percent));
+
+  progressBar.style.width = value + "%";
+  progressText.textContent = Math.round(value) + "%";
 }
 
 async function loadSafirOSImage() {
@@ -19,8 +23,10 @@ async function loadSafirOSImage() {
 
   setStatus(
     "SafirOS.img を読み込んでいます...\n" +
-    "0%"
+    "フロッピーイメージを取得中"
   );
+
+  setProgress(0);
 
   const response = await fetch(imageUrl, {
     cache: "no-store"
@@ -44,10 +50,7 @@ async function loadSafirOSImage() {
   if (!response.body) {
     const buffer = await response.arrayBuffer();
 
-    setStatus(
-      "SafirOS.img を読み込み中...\n" +
-      "100%"
-    );
+    setProgress(100);
 
     return buffer;
   }
@@ -58,26 +61,33 @@ async function loadSafirOSImage() {
   let received = 0;
 
   while (true) {
-    const { done, value } = await reader.read();
+    const result = await reader.read();
 
-    if (done) {
+    if (result.done) {
       break;
     }
+
+    const value = result.value;
 
     if (value) {
       chunks.push(value);
       received += value.length;
     }
 
-    const percent = Math.min(
-      100,
-      Math.round((received / total) * 100)
-    );
+    const percent =
+      Math.min(
+        100,
+        (received / total) * 100
+      );
+
+    setProgress(percent);
 
     setStatus(
-      "SafirOS.img を読み込み中...\n" +
-      percent +
-      "%"
+      "SafirOS.img を読み込んでいます...\n" +
+      received.toLocaleString() +
+      " / " +
+      total.toLocaleString() +
+      " bytes"
     );
   }
 
@@ -90,14 +100,27 @@ async function loadSafirOSImage() {
     offset += chunk.length;
   }
 
+  setProgress(100);
+
   return buffer.buffer;
 }
 
 async function startSafirOS() {
-  try {
-    const imageBuffer = await loadSafirOSImage();
 
-    const size = imageBuffer.byteLength;
+  try {
+
+    setStatus(
+      "SAFIROS BOOT\n" +
+      "Preparing virtual machine..."
+    );
+
+    setProgress(0);
+
+    const imageBuffer =
+      await loadSafirOSImage();
+
+    const size =
+      imageBuffer.byteLength;
 
     if (size !== EXPECTED_IMAGE_SIZE) {
       throw new Error(
@@ -112,16 +135,18 @@ async function startSafirOS() {
     }
 
     setStatus(
-      "① SafirOS.img: HTTP 200 OK\n" +
-      "② サイズ: " +
-      size +
+      "SAFIROS BOOT\n" +
+      "Disk image: OK\n" +
+      "Size: " +
+      size.toLocaleString() +
       " bytes\n" +
-      "③ 1.44 MB フロッピーイメージ確認\n" +
-      "④ 読み込み完了\n" +
-      "⑤ v86 を起動しています..."
+      "Starting v86..."
     );
 
+    setProgress(100);
+
     window.emulator = new V86({
+
       wasm_path:
         "https://cdn.jsdelivr.net/npm/v86@0.5.458/build/v86.wasm",
 
@@ -156,18 +181,22 @@ async function startSafirOS() {
     });
 
     setStatus(
-      "SafirOS.img: OK\n" +
-      "v86: 起動中\n" +
-      "SafirOS: BOOT"
+      "SAFIROS BOOT\n" +
+      "Disk image: OK\n" +
+      "v86: RUNNING\n" +
+      "Waiting for bootloader..."
     );
 
   } catch (error) {
+
     console.error(error);
 
     setStatus(
-      "SafirOSの起動に失敗しました。\n\n" +
+      "SAFIROS BOOT FAILED\n\n" +
       error.message
     );
+
+    setProgress(0);
   }
 }
 
