@@ -12,28 +12,33 @@ start:
 
     mov si, message
 
-print_loop:
-
+print_message:
     lodsb
 
     cmp al, 0
-    je halt
+    je wait_key
 
     mov ah, 0x0E
     mov bh, 0x00
     int 0x10
 
-    jmp print_loop
+    jmp print_message
 
-halt:
 
-    cli
-    hlt
+wait_key:
 
-    jmp halt
+    mov ah, 0x00
+    int 0x16
 
-message db "SafirOS Kernel v0.1", 13, 10
-        db "Kernel loaded successfully.", 13, 10
+    mov ah, 0x0E
+    mov bh, 0x00
+    int 0x10
+
+    jmp wait_key
+
+
+message db "SafirOS Kernel v0.2", 13, 10
+        db "Keyboard input enabled.", 13, 10
         db "> ", 0
 
 times 510 - ($ - $$) db 0
