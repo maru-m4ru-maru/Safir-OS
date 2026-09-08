@@ -12,7 +12,10 @@ body {
 body {
   background: #111;
   color: #fff;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
 }
 
 .container {
@@ -21,16 +24,46 @@ body {
   padding: 24px;
 }
 
-h1 {
-  margin: 0 0 16px;
+.header {
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 32px;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  color: #aaa;
+  font-size: 14px;
+}
+
+.panel {
+  margin-bottom: 20px;
+  background: #1a1a1a;
+  border: 1px solid #2d2d2d;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.panel-header {
+  padding: 10px 14px;
+  background: #222;
+  border-bottom: 1px solid #2d2d2d;
+  font-size: 13px;
+  font-weight: bold;
 }
 
 .status {
-  margin-bottom: 16px;
-  padding: 12px;
-  background: #222;
-  border-radius: 8px;
+  padding: 14px;
+  min-height: 80px;
+  background: #151515;
+  color: #ddd;
   white-space: pre-line;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 #screen_container {
@@ -38,7 +71,6 @@ h1 {
   min-height: 420px;
   background: #000;
   overflow: hidden;
-  border-radius: 8px;
 }
 
 #screen_container > div {
@@ -47,4 +79,19 @@ h1 {
   font-size: 16px;
   line-height: 20px;
   padding: 8px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 12px;
+  }
+
+  .header h1 {
+    font-size: 26px;
+  }
+
+  #screen_container {
+    min-height: 360px;
+  }
 }
