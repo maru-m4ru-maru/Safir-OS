@@ -190,7 +190,6 @@ check_echo:
     jne .not_echo_result
 
     cmp al, ' '
-
     jne .not_echo_result
 
     pop di
@@ -213,11 +212,10 @@ print_echo:
 
     mov si, input_buffer
 
-    mov di, command_echo
-
 .skip_echo:
 
     mov al, [si]
+
     cmp al, 0
     je .done
 
@@ -225,6 +223,7 @@ print_echo:
     je .found_space
 
     inc si
+
     jmp .skip_echo
 
 
@@ -233,6 +232,7 @@ print_echo:
     inc si
 
     call print_string
+
 
 .done:
 
@@ -320,6 +320,4 @@ input_length db 0
 
 input_buffer times 64 db 0
 
-times 510 - ($ - $$) db 0
-
-dw 0x0000
+times 1024 - ($ - $$) db 0
