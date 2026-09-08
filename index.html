@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>SafirOS</title>
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+  <link rel="icon" href="favicon.svg?v=2" type="image/svg+xml">
+  <link rel="shortcut icon" href="favicon.svg?v=2">
 
   <style>
     html,
@@ -60,7 +62,7 @@
     #screen_container {
       width: 100%;
       max-width: 960px;
-      height: 420px;
+      min-height: 420px;
       margin: 0 auto;
       background: #000;
       overflow: hidden;
@@ -68,8 +70,11 @@
 
     #screen_container > div {
       white-space: pre;
-      font: 14px monospace;
-      line-height: 14px;
+      font-family: monospace;
+      font-size: 16px;
+      line-height: 20px;
+      padding: 8px;
+      box-sizing: border-box;
     }
 
     #screen_container canvas {
