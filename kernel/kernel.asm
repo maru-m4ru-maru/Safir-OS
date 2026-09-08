@@ -11,42 +11,51 @@ start:
     int 0x10
 
     mov si, message
+    call print_string
 
-print_message:
+    call new_prompt
 
-    lodsb
-
-    cmp al, 0
-    je wait_key
-
-    mov ah, 0x0E
-    mov bh, 0x00
-    int 0x10
-
-    jmp print_message
-
-
-wait_key:
+read_key:
 
     mov ah, 0x00
     int 0x16
 
     cmp al, 0x08
-    je backspace
+    je handle_backspace
 
     cmp al, 0x0D
-    je enter_key
+    je handle_enter
+
+    cmp al, 0x20
+    jb read_key
+
+    cmp byte [input_length], 63
+    jae read_key
+
+    xor bx, bx
+    mov bl, [input_length]
+
+    mov [input_buffer + bx], al
+
+    inc byte [input_length]
 
     mov ah, 0x0E
     mov bh, 0x00
     int 0x10
 
-    jmp wait_key
+    jmp read_key
 
 
-backspace:
+handle_backspace:
+
+    cmp byte [input_length], 0
+    je read_key
+
+    dec byte [input_length]
 
     mov ah, 0x0E
+    mov bh, 0x00
+
     mov al, 0x08
     int 0x10
 
@@ -56,12 +65,13 @@ backspace:
     mov al, 0x08
     int 0x10
 
-    jmp wait_key
+    jmp read_key
 
 
-enter_key:
+handle_enter:
 
     mov ah, 0x0E
+    mov bh, 0x00
 
     mov al, 0x0D
     int 0x10
@@ -69,12 +79,47 @@ enter_key:
     mov al, 0x0A
     int 0x10
 
-    jmp wait_key
+    mov byte [input_length], 0
+
+    call new_prompt
+
+    jmp read_key
 
 
-message db "Safirm Kernel v0.3", 13, 10
-        db "Keyboard input enabled.", 13, 10
-        db "> ", 0
+new_prompt:
+
+    mov si, prompt
+    call print_string
+
+    ret
+
+
+print_string:
+
+    lodsb
+
+    cmp al, 0
+    je .done
+
+    mov ah, 0x0E
+    mov bh, 0x00
+    int 0x10
+
+    jmp print_string
+
+.done:
+
+    ret
+
+
+message db "SafirOS Kernel v0.3", 13, 10
+        db "Keyboard input enabled.", 13, 10, 0
+
+prompt db "> ", 0
+
+input_length db 0
+
+input_buffer times 64 db 0
 
 times 510 - ($ - $$) db 0
 
