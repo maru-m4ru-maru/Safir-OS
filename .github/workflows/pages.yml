@@ -31,14 +31,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y nasm
 
-      - name: Build SafirOS
+      - name: Prepare site
         run: |
           mkdir -p site
-          nasm -f bin boot/boot.asm -o site/SafirOS.img
-
-      - name: Copy website
-        run: |
           cp index.html site/index.html
+
+      - name: Build SafirOS
+        run: |
+          nasm -f bin boot/boot.asm -o site/SafirOS.img
 
       - name: Check image
         run: |
