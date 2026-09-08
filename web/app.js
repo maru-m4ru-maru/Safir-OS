@@ -5,15 +5,24 @@ const screenContainer = document.getElementById("screen_container");
 
 function setStatus(message, type = "") {
   status.textContent = message;
-  status.className = "status " + type;
+  status.className = "status";
+
+  if (type) {
+    status.classList.add(type);
+  }
 }
 
 async function loadSafirOSImage() {
   const imageUrl = "SafirOS.img";
 
-  setStatus("SafirOS.img を読み込んでいます...");
+  setStatus(
+    "SafirOS.img を読み込んでいます...\n" +
+    "0%"
+  );
 
-  const response = await fetch(imageUrl);
+  const response = await fetch(imageUrl, {
+    cache: "no-store"
+  });
 
   if (!response.ok) {
     throw new Error(
@@ -24,6 +33,17 @@ async function loadSafirOSImage() {
 
   const total =
     Number(response.headers.get("Content-Length")) || 1024;
+
+  if (!response.body) {
+    const buffer = await response.arrayBuffer();
+
+    setStatus(
+      "SafirOS.img を読み込み中...\n" +
+      "100%"
+    );
+
+    return buffer;
+  }
 
   const reader = response.body.getReader();
 
@@ -81,10 +101,11 @@ async function startSafirOS() {
 
     setStatus(
       "① SafirOS.img: HTTP 200 OK\n" +
-      "② サイズ: 1024 bytes\n" +
+      "② サイズ: " +
+      size +
+      " bytes\n" +
       "③ 読み込み完了\n" +
-      "④ v86 を起動しています...",
-      "ok"
+      "④ v86 を起動しています..."
     );
 
     window.emulator = new V86({
@@ -132,8 +153,7 @@ async function startSafirOS() {
 
     setStatus(
       "SafirOSの起動に失敗しました。\n\n" +
-      error.message,
-      "error"
+      error.message
     );
   }
 }
