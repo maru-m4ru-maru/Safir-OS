@@ -17,15 +17,33 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y nasm
 
-      - name: Build boot sector
+      - name: Build bootloader
         run: |
           mkdir -p build
-          nasm -f bin boot/boot.asm -o build/SafirOS.img
+          nasm -f bin boot/boot.asm -o build/boot.bin
 
-      - name: Check image size
+      - name: Build kernel
         run: |
-          ls -lh build/SafirOS.img
-          test "$(stat -c%s build/SafirOS.img)" -eq 512
+          nasm -f bin kernel/kernel.asm -o build/kernel.bin
+
+      - name: Pad kernel to one sector
+        run: |
+          dd if=build/kernel.bin \
+             of=build/kernel-sector.bin \
+             bs=512 \
+             conv=sync
+
+      - name: Create SafirOS image
+        run: |
+          cat build/boot.bin build/kernel-sector.bin > build/SafirOS.img
+
+      - name: Check files
+        run: |
+          ls -lh build/
+          test "$(stat -c%s build/boot.bin)" -eq 512
+          test "$(stat -c%s build/kernel.bin)" -eq 512
+          test "$(stat -c%s build/kernel-sector.bin)" -eq 512
+          test "$(stat -c%s build/SafirOS.img)" -eq 1024
 
       - name: Upload SafirOS image
         uses: actions/upload-artifact@v4
