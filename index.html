@@ -2,22 +2,36 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SafirOS</title>
 
   <style>
-    html, body {
+    html,
+    body {
       margin: 0;
       padding: 0;
       background: #111;
-      color: white;
+      color: #fff;
       font-family: monospace;
+    }
+
+    body {
+      padding: 16px;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 24px;
     }
 
     #screen_container {
       width: 100%;
       max-width: 1024px;
-      margin: 20px auto;
-      background: black;
+      min-height: 480px;
+      margin: 0 auto;
+      background: #000;
+      overflow: hidden;
     }
 
     #screen_container > div {
@@ -28,6 +42,7 @@
 
     #screen_container canvas {
       display: none;
+      max-width: 100%;
     }
   </style>
 
@@ -46,22 +61,35 @@
   <script>
     "use strict";
 
-    window.onload = function () {
+    window.addEventListener("load", function () {
+      const screenContainer =
+        document.getElementById("screen_container");
+
+      const canvas =
+        screenContainer.querySelector("canvas");
+
       window.emulator = new V86({
-        wasm_path: "https://copy.sh/v86/build/v86.wasm",
+        wasm_path:
+          "https://copy.sh/v86/build/v86.wasm",
 
         memory_size: 16 * 1024 * 1024,
-        vga_memory_size: 2 * 1024 * 1024,
+
+        vga_memory_size:
+          2 * 1024 * 1024,
 
         screen_container:
-          document.getElementById("screen_container"),
+          screenContainer,
+
+        canvas: canvas,
 
         bios: {
-          url: "https://copy.sh/v86/bios/seabios.bin"
+          url:
+            "https://copy.sh/v86/bios/seabios.bin"
         },
 
         vga_bios: {
-          url: "https://copy.sh/v86/bios/vgabios.bin"
+          url:
+            "https://copy.sh/v86/bios/vgabios.bin"
         },
 
         fda: {
@@ -70,7 +98,7 @@
 
         autostart: true
       });
-    };
+    });
   </script>
 
 </body>
