@@ -70,6 +70,11 @@ handle_backspace:
 
 handle_enter:
 
+    xor bx, bx
+    mov bl, [input_length]
+
+    mov byte [input_buffer + bx], 0
+
     mov ah, 0x0E
     mov bh, 0x00
 
@@ -79,6 +84,8 @@ handle_enter:
     mov al, 0x0A
     int 0x10
 
+    call execute_command
+
     mov byte [input_length], 0
 
     call new_prompt
@@ -86,11 +93,84 @@ handle_enter:
     jmp read_key
 
 
+execute_command:
+
+    mov si, input_buffer
+    mov di, command_help
+    call compare_string
+    jc .help
+
+    mov si, input_buffer
+    mov di, command_version
+    call compare_string
+    jc .version
+
+    mov si, input_buffer
+    mov di, command_clear
+    call compare_string
+    jc .clear
+
+    mov si, unknown
+    call print_string
+    ret
+
+
+.help:
+
+    mov si, help_text
+    call print_string
+    ret
+
+
+.version:
+
+    mov si, version_text
+    call print_string
+    ret
+
+
+.clear:
+
+    mov ax, 0x0003
+    int 0x10
+    ret
+
+
+compare_string:
+
+.loop:
+
+    mov al, [si]
+    mov ah, [di]
+
+    cmp al, ah
+    jne .not_equal
+
+    cmp al, 0
+    je .equal
+
+    inc si
+    inc di
+
+    jmp .loop
+
+
+.not_equal:
+
+    clc
+    ret
+
+
+.equal:
+
+    stc
+    ret
+
+
 new_prompt:
 
     mov si, prompt
     call print_string
-
     ret
 
 
@@ -112,10 +192,23 @@ print_string:
     ret
 
 
-message db "SafirOS Kernel v0.3", 13, 10
-        db "Keyboard input enabled.", 13, 10, 0
+message db "SafirOS Kernel v0.4", 13, 10
+        db "Simple shell enabled.", 13, 10, 0
 
 prompt db "> ", 0
+
+command_help db "help", 0
+command_version db "version", 0
+command_clear db "clear", 0
+
+help_text db "Available commands:", 13, 10
+          db "help", 13, 10
+          db "version", 13, 10
+          db "clear", 13, 10, 0
+
+version_text db "SafirOS Kernel v0.4", 13, 10, 0
+
+unknown db "Unknown command.", 13, 10, 0
 
 input_length db 0
 
