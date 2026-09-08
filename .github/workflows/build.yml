@@ -1,1 +1,34 @@
+name: Build SafirOS
 
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install NASM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm
+
+      - name: Build boot sector
+        run: |
+          mkdir -p build
+          nasm -f bin boot/boot.asm -o build/SafirOS.img
+
+      - name: Check image size
+        run: |
+          ls -lh build/SafirOS.img
+          test "$(stat -c%s build/SafirOS.img)" -eq 512
+
+      - name: Upload SafirOS image
+        uses: actions/upload-artifact@v4
+        with:
+          name: SafirOS
+          path: build/SafirOS.img
