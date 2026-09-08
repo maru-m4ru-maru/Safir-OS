@@ -1,4 +1,4 @@
-name: Deploy SafirOS Pages
+name: Build and Deploy SafirOS
 
 on:
   push:
@@ -26,10 +26,29 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      - name: Install NASM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm
+
+      - name: Build SafirOS
+        run: |
+          mkdir -p site
+          nasm -f bin boot/boot.asm -o site/SafirOS.img
+
+      - name: Copy website
+        run: |
+          cp index.html site/index.html
+
+      - name: Check image
+        run: |
+          ls -lh site/SafirOS.img
+          test "$(stat -c%s site/SafirOS.img)" -eq 512
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: .
+          path: site
 
       - name: Deploy to GitHub Pages
         id: deployment
