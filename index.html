@@ -27,7 +27,32 @@
 
     #status {
       margin-bottom: 16px;
+      padding: 10px;
+      background: #181818;
+      border-radius: 8px;
       white-space: pre-wrap;
+      line-height: 1.5;
+    }
+
+    #progress {
+      width: 100%;
+      max-width: 600px;
+      height: 18px;
+      margin-bottom: 16px;
+      background: #333;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    #progress_bar {
+      width: 0%;
+      height: 100%;
+      background: #fff;
+      transition: width 0.15s ease;
+    }
+
+    #progress_text {
+      margin-bottom: 16px;
     }
 
     #screen_container {
@@ -63,7 +88,8 @@
     }
   </style>
 
-  <script src="https://copy.sh/v86/build/libv86.js"></script>
+  <!-- v86 -->
+  <script src="https://cdn.jsdelivr.net/npm/v86@0.5.458/build/libv86.js"></script>
 </head>
 
 <body>
@@ -74,6 +100,14 @@
 SafirOS.img を確認しています...
   </div>
 
+  <div id="progress">
+    <div id="progress_bar"></div>
+  </div>
+
+  <div id="progress_text">
+    0%
+  </div>
+
   <div id="screen_container">
     <div></div>
     <canvas></canvas>
@@ -82,7 +116,15 @@ SafirOS.img を確認しています...
   <script>
     "use strict";
 
-    const status = document.getElementById("status");
+    const status =
+      document.getElementById("status");
+
+    const progressBar =
+      document.getElementById("progress_bar");
+
+    const progressText =
+      document.getElementById("progress_text");
+
     const screenContainer =
       document.getElementById("screen_container");
 
@@ -91,108 +133,169 @@ SafirOS.img を確認しています...
       status.className = className || "info";
     }
 
-    async function startSafirOS() {
-      const imageUrl = "SafirOS.img";
+    function setProgress(percent) {
+      const safePercent =
+        Math.max(0, Math.min(100, percent));
 
-      try {
-        setStatus(
-          "① SafirOS.img を取得しています...",
-          "info"
+      progressBar.style.width =
+        safePercent + "%";
+
+      progressText.textContent =
+        Math.round(safePercent) + "%";
+    }
+
+    async function loadSafirOSImage() {
+      const imageUrl =
+        "SafirOS.img";
+
+      setStatus(
+        "① SafirOS.img を取得しています...",
+        "info"
+      );
+
+      setProgress(0);
+
+      const response =
+        await fetch(imageUrl, {
+          cache: "no-store"
+        });
+
+      if (!response.ok) {
+        throw new Error(
+          "SafirOS.img の取得に失敗しました。\n" +
+          "HTTP " + response.status
         );
+      }
 
-        const response = await fetch(
-          imageUrl + "?t=" + Date.now(),
-          {
-            cache: "no-store"
-          }
-        );
+      const total =
+        Number(response.headers.get("Content-Length")) || 512;
 
-        if (!response.ok) {
-          throw new Error(
-            "SafirOS.img の取得に失敗しました。HTTP " +
-            response.status
-          );
+      if (!response.body) {
+        const buffer =
+          await response.arrayBuffer();
+
+        setProgress(100);
+
+        return buffer;
+      }
+
+      const reader =
+        response.body.getReader();
+
+      const chunks = [];
+
+      let received = 0;
+
+      while (true) {
+        const result =
+          await reader.read();
+
+        if (result.done) {
+          break;
         }
 
-        const buffer = await response.arrayBuffer();
-        const size = buffer.byteLength;
+        chunks.push(result.value);
+
+        received += result.value.length;
+
+        const percent =
+          total > 0
+            ? (received / total) * 100
+            : 0;
+
+        setProgress(percent);
+      }
+
+      const buffer =
+        new Uint8Array(received);
+
+      let offset = 0;
+
+      for (const chunk of chunks) {
+        buffer.set(chunk, offset);
+        offset += chunk.length;
+      }
+
+      setProgress(100);
+
+      return buffer.buffer;
+    }
+
+    async function startSafirOS() {
+      try {
+        const imageBuffer =
+          await loadSafirOSImage();
+
+        const size =
+          imageBuffer.byteLength;
 
         if (size !== 512) {
           throw new Error(
-            "SafirOS.img のサイズが512バイトではありません。実際: " +
+            "SafirOS.img のサイズが512バイトではありません。\n" +
+            "実際のサイズ: " +
             size +
             " bytes"
           );
         }
 
         setStatus(
-          "① HTTPステータス: 200 OK\n" +
-          "② SafirOS.img サイズ: 512 bytes\n" +
-          "③ SafirOS.img は正常です。\n" +
+          "① SafirOS.img: HTTP 200 OK\n" +
+          "② サイズ: 512 bytes\n" +
+          "③ 読み込み完了\n" +
           "④ v86 を起動しています...",
           "ok"
         );
 
-        const canvas =
-          screenContainer.querySelector("canvas");
+        window.emulator =
+          new V86({
+            wasm_path:
+              "https://cdn.jsdelivr.net/npm/v86@0.5.458/build/v86.wasm",
 
-        window.emulator = new V86({
-          wasm_path:
-            "https://copy.sh/v86/build/v86.wasm",
+            memory_size:
+              16 * 1024 * 1024,
 
-          memory_size:
-            16 * 1024 * 1024,
+            vga_memory_size:
+              2 * 1024 * 1024,
 
-          vga_memory_size:
-            2 * 1024 * 1024,
+            screen_container:
+              screenContainer,
 
-          screen_container:
-            screenContainer,
+            bios: {
+              url:
+                "https://cdn.jsdelivr.net/npm/v86@0.5.458/bios/seabios.bin"
+            },
 
-          canvas: canvas,
+            vga_bios: {
+              url:
+                "https://cdn.jsdelivr.net/npm/v86@0.5.458/bios/vgabios.bin"
+            },
 
-          bios: {
-            url:
-              "https://copy.sh/v86/bios/seabios.bin"
-          },
+            fda: {
+              buffer: imageBuffer
+            },
 
-          vga_bios: {
-            url:
-              "https://copy.sh/v86/bios/vgabios.bin"
-          },
+            boot_order: 0x321,
 
-          fda: {
-            url: imageUrl
-          },
+            autostart: true
+          });
 
-          boot_order: 0x321,
-
-          autostart: true
-        });
+        setStatus(
+          "① SafirOS.img: HTTP 200 OK\n" +
+          "② サイズ: 512 bytes\n" +
+          "③ 読み込み完了\n" +
+          "④ v86 起動中...\n" +
+          "⑤ SafirOS を起動しています...",
+          "ok"
+        );
 
         window.emulator.add_listener(
           "emulator-ready",
           function () {
             setStatus(
-              "① HTTPステータス: 200 OK\n" +
-              "② SafirOS.img サイズ: 512 bytes\n" +
-              "③ イメージ取得OK\n" +
-              "④ v86準備完了\n" +
-              "⑤ SafirOSを起動しています...",
+              "v86 準備完了\n" +
+              "SafirOS.img 読み込み完了\n" +
+              "SafirOS 起動中...",
               "ok"
-            );
-          }
-        );
-
-        window.emulator.add_listener(
-          "download-error",
-          function (error) {
-            console.error("v86 download error:", error);
-
-            setStatus(
-              "v86のディスク読み込みエラー\n\n" +
-              JSON.stringify(error, null, 2),
-              "error"
             );
           }
         );
@@ -205,6 +308,8 @@ SafirOS.img を確認しています...
           error.message,
           "error"
         );
+
+        setProgress(0);
       }
     }
 
