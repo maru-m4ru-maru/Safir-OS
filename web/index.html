@@ -6,8 +6,8 @@
 
   <title>SafirOS</title>
 
-  <link rel="icon" href="../favicon.svg?v=3" type="image/svg+xml">
-  <link rel="shortcut icon" href="../favicon.svg?v=3">
+  <link rel="icon" href="favicon.svg?v=4" type="image/svg+xml">
+  <link rel="shortcut icon" href="favicon.svg?v=4">
 
   <link rel="stylesheet" href="style.css">
 
@@ -18,13 +18,32 @@
 
   <main class="container">
 
-    <h1>SafirOS</h1>
+    <header class="header">
+      <h1>SafirOS</h1>
+      <p class="subtitle">Web-based SafirOS emulator</p>
+    </header>
 
-    <div id="status" class="status">
-      SafirOSを起動しています...
-    </div>
+    <section class="panel">
 
-    <div id="screen_container"></div>
+      <div class="panel-header">
+        <span>System status</span>
+      </div>
+
+      <div id="status" class="status">
+        SafirOSを起動しています...
+      </div>
+
+    </section>
+
+    <section class="panel">
+
+      <div class="panel-header">
+        <span>Virtual machine</span>
+      </div>
+
+      <div id="screen_container"></div>
+
+    </section>
 
   </main>
 
