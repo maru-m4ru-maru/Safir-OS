@@ -110,8 +110,13 @@ execute_command:
     call compare_string
     jc .clear
 
+    mov si, input_buffer
+    call check_echo
+    jc .echo
+
     mov si, unknown
     call print_string
+
     ret
 
 
@@ -119,6 +124,7 @@ execute_command:
 
     mov si, help_text
     call print_string
+
     ret
 
 
@@ -126,6 +132,7 @@ execute_command:
 
     mov si, version_text
     call print_string
+
     ret
 
 
@@ -133,6 +140,102 @@ execute_command:
 
     mov ax, 0x0003
     int 0x10
+
+    ret
+
+
+.echo:
+
+    call print_echo
+
+    ret
+
+
+check_echo:
+
+    push si
+    push di
+
+    mov di, command_echo
+
+.echo_compare:
+
+    mov al, [si]
+    mov ah, [di]
+
+    cmp al, ah
+    jne .not_echo
+
+    cmp al, 0
+    je .echo_only
+
+    inc si
+    inc di
+
+    jmp .echo_compare
+
+
+.echo_only:
+
+    pop di
+    pop si
+
+    clc
+    ret
+
+
+.not_echo:
+
+    cmp byte [di], 0
+    jne .not_echo_result
+
+    cmp al, ' '
+
+    jne .not_echo_result
+
+    pop di
+    pop si
+
+    stc
+    ret
+
+
+.not_echo_result:
+
+    pop di
+    pop si
+
+    clc
+    ret
+
+
+print_echo:
+
+    mov si, input_buffer
+
+    mov di, command_echo
+
+.skip_echo:
+
+    mov al, [si]
+    cmp al, 0
+    je .done
+
+    cmp al, ' '
+    je .found_space
+
+    inc si
+    jmp .skip_echo
+
+
+.found_space:
+
+    inc si
+
+    call print_string
+
+.done:
+
     ret
 
 
@@ -171,6 +274,7 @@ new_prompt:
 
     mov si, prompt
     call print_string
+
     ret
 
 
@@ -192,7 +296,7 @@ print_string:
     ret
 
 
-message db "SafirOS Kernel v0.4", 13, 10
+message db "SafirOS Kernel v0.5", 13, 10
         db "Simple shell enabled.", 13, 10, 0
 
 prompt db "> ", 0
@@ -200,13 +304,15 @@ prompt db "> ", 0
 command_help db "help", 0
 command_version db "version", 0
 command_clear db "clear", 0
+command_echo db "echo", 0
 
 help_text db "Available commands:", 13, 10
           db "help", 13, 10
           db "version", 13, 10
-          db "clear", 13, 10, 0
+          db "clear", 13, 10
+          db "echo", 13, 10, 0
 
-version_text db "SafirOS Kernel v0.4", 13, 10, 0
+version_text db "SafirOS Kernel v0.5", 13, 10, 0
 
 unknown db "Unknown command.", 13, 10, 0
 
