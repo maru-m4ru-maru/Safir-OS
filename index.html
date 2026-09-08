@@ -2,10 +2,74 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>SafirOS</title>
+  <title>Safir OS</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: monospace;
+    }
+
+    #screen_container {
+      width: 100%;
+      max-width: 1024px;
+      margin: 20px auto;
+      background: black;
+    }
+
+    #screen_container > div {
+      white-space: pre;
+      font-size: 14px;
+      line-height: 14px;
+    }
+
+    canvas {
+      width: 100%;
+      height: auto;
+    }
+  </style>
+
+  <script src="https://copy.sh/v86/build/libv86.js"></script>
 </head>
+
 <body>
+
   <h1>SafirOS</h1>
-  <p>Booting...</p>
+
+  <div id="screen_container">
+    <div></div>
+    <canvas style="display: none"></canvas>
+  </div>
+
+  <script>
+    window.onload = function () {
+      new V86({
+        wasm_path: "https://copy.sh/v86/build/v86.wasm",
+
+        memory_size: 16 * 1024 * 1024,
+        vga_memory_size: 2 * 1024 * 1024,
+
+        screen_container:
+          document.getElementById("screen_container"),
+
+        bios: {
+          url: "https://copy.sh/v86/bios/seabios.bin"
+        },
+
+        vga_bios: {
+          url: "https://copy.sh/v86/bios/vgabios.bin"
+        },
+
+        fda: {
+          url: "SafirOS.img"
+        },
+
+        autostart: true
+      });
+    };
+  </script>
+
 </body>
 </html>
