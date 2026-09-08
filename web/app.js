@@ -3,6 +3,8 @@
 const status = document.getElementById("status");
 const screenContainer = document.getElementById("screen_container");
 
+const EXPECTED_IMAGE_SIZE = 1474560;
+
 function setStatus(message, type = "") {
   status.textContent = message;
   status.className = "status";
@@ -31,8 +33,13 @@ async function loadSafirOSImage() {
     );
   }
 
+  const contentLength =
+    Number(response.headers.get("Content-Length"));
+
   const total =
-    Number(response.headers.get("Content-Length")) || 1024;
+    contentLength > 0
+      ? contentLength
+      : EXPECTED_IMAGE_SIZE;
 
   if (!response.body) {
     const buffer = await response.arrayBuffer();
@@ -57,8 +64,10 @@ async function loadSafirOSImage() {
       break;
     }
 
-    chunks.push(value);
-    received += value.length;
+    if (value) {
+      chunks.push(value);
+      received += value.length;
+    }
 
     const percent = Math.min(
       100,
@@ -90,9 +99,12 @@ async function startSafirOS() {
 
     const size = imageBuffer.byteLength;
 
-    if (size !== 1024) {
+    if (size !== EXPECTED_IMAGE_SIZE) {
       throw new Error(
-        "SafirOS.img のサイズが1024バイトではありません。\n" +
+        "SafirOS.img のサイズが正しくありません。\n" +
+        "期待値: " +
+        EXPECTED_IMAGE_SIZE +
+        " bytes\n" +
         "実際: " +
         size +
         " bytes"
@@ -104,8 +116,9 @@ async function startSafirOS() {
       "② サイズ: " +
       size +
       " bytes\n" +
-      "③ 読み込み完了\n" +
-      "④ v86 を起動しています..."
+      "③ 1.44 MB フロッピーイメージ確認\n" +
+      "④ 読み込み完了\n" +
+      "⑤ v86 を起動しています..."
     );
 
     window.emulator = new V86({
