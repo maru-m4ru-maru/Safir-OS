@@ -233,6 +233,15 @@ print_echo:
 
     call print_string
 
+    mov ah, 0x0E
+    mov bh, 0x00
+
+    mov al, 0x0D
+    int 0x10
+
+    mov al, 0x0A
+    int 0x10
+
 
 .done:
 
@@ -291,6 +300,7 @@ print_string:
 
     jmp print_string
 
+
 .done:
 
     ret
@@ -321,3 +331,5 @@ input_length db 0
 input_buffer times 64 db 0
 
 times 1024 - ($ - $$) db 0
+
+dw 0x0000
