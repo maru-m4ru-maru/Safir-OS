@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -31,19 +31,36 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y nasm
 
-      - name: Prepare site
+      - name: Build bootloader
+        run: |
+          mkdir -p build
+          nasm -f bin boot/boot.asm -o build/boot.bin
+
+      - name: Build kernel
+        run: |
+          nasm -f bin kernel/kernel.asm -o build/kernel.bin
+
+      - name: Pad kernel
+        run: |
+          dd if=build/kernel.bin \
+             of=build/kernel-sector.bin \
+             bs=512 \
+             conv=sync
+
+      - name: Create SafirOS image
         run: |
           mkdir -p site
-          cp index.html site/index.html
-
-      - name: Build SafirOS
-        run: |
-          nasm -f bin boot/boot.asm -o site/SafirOS.img
+          cat build/boot.bin build/kernel-sector.bin > site/SafirOS.img
 
       - name: Check image
         run: |
           ls -lh site/SafirOS.img
-          test "$(stat -c%s site/SafirOS.img)" -eq 512
+          test "$(stat -c%s site/SafirOS.img)" -eq 1024
+
+      - name: Copy website
+        run: |
+          cp index.html site/index.html
+          cp favicon.svg site/favicon.svg
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
