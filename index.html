@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>SafirOS</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
 
   <style>
     html,
@@ -58,8 +59,8 @@
 
     #screen_container {
       width: 100%;
-      max-width: 1024px;
-      height: 480px;
+      max-width: 960px;
+      height: 420px;
       margin: 0 auto;
       background: #000;
       overflow: hidden;
@@ -74,6 +75,7 @@
     #screen_container canvas {
       display: none;
       max-width: 100%;
+      image-rendering: pixelated;
     }
 
     .ok {
@@ -97,16 +99,14 @@
   <h1>SafirOS</h1>
 
   <div id="status" class="info">
-SafirOS.img を確認しています...
+    SafirOS.img を確認しています...
   </div>
 
   <div id="progress">
     <div id="progress_bar"></div>
   </div>
 
-  <div id="progress_text">
-    0%
-  </div>
+  <div id="progress_text">0%</div>
 
   <div id="screen_container">
     <div></div>
@@ -145,7 +145,6 @@ SafirOS.img を確認しています...
     }
 
     async function loadSafirOSImage() {
-
       const imageUrl = "SafirOS.img";
 
       setStatus(
@@ -187,11 +186,9 @@ SafirOS.img を確認しています...
         response.body.getReader();
 
       const chunks = [];
-
       let received = 0;
 
       while (true) {
-
         const result =
           await reader.read();
 
@@ -200,9 +197,7 @@ SafirOS.img を確認しています...
         }
 
         chunks.push(result.value);
-
-        received +=
-          result.value.length;
+        received += result.value.length;
 
         const percent =
           total > 0
@@ -228,9 +223,7 @@ SafirOS.img を確認しています...
     }
 
     async function startSafirOS() {
-
       try {
-
         const imageBuffer =
           await loadSafirOSImage();
 
@@ -252,12 +245,8 @@ SafirOS.img を確認しています...
           "ok"
         );
 
-        const canvas =
-          screenContainer.querySelector("canvas");
-
         window.emulator =
           new V86({
-
             wasm_path:
               "https://cdn.jsdelivr.net/npm/v86@0.5.458/build/v86.wasm",
 
@@ -303,27 +292,25 @@ SafirOS.img を確認しています...
         window.emulator.add_listener(
           "emulator-ready",
           function () {
-
             setStatus(
-              "✅ v86 準備完了\n" +
-              "✅ SafirOS.img 読み込み完了\n" +
-              "🚀 SafirOS 起動中...",
+              "v86 準備完了\n" +
+              "SafirOS.img 読み込み完了\n" +
+              "SafirOS 起動中...",
               "ok"
             );
-
           }
         );
 
       } catch (error) {
-
         console.error(error);
 
         setStatus(
-          "❌ エラー\n\n" +
+          "エラー\n\n" +
           error.message,
           "error"
         );
 
+        setProgress(0);
       }
     }
 
