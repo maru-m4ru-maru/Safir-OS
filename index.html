@@ -1,12 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>Safir OS</title>
+  <meta charset="utf-8">
+  <title>SafirOS</title>
 
   <style>
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
       background: #111;
       color: white;
       font-family: monospace;
@@ -21,13 +22,12 @@
 
     #screen_container > div {
       white-space: pre;
-      font-size: 14px;
+      font: 14px monospace;
       line-height: 14px;
     }
 
-    canvas {
-      width: 100%;
-      height: auto;
+    #screen_container canvas {
+      display: none;
     }
   </style>
 
@@ -40,12 +40,14 @@
 
   <div id="screen_container">
     <div></div>
-    <canvas style="display: none"></canvas>
+    <canvas></canvas>
   </div>
 
   <script>
+    "use strict";
+
     window.onload = function () {
-      new V86({
+      window.emulator = new V86({
         wasm_path: "https://copy.sh/v86/build/v86.wasm",
 
         memory_size: 16 * 1024 * 1024,
