@@ -26,24 +26,40 @@ jobs:
         run: |
           nasm -f bin kernel/kernel.asm -o build/kernel.bin
 
-      - name: Pad kernel to one sector
+      - name: Check bootloader and kernel
         run: |
-          dd if=build/kernel.bin \
-             of=build/kernel-sector.bin \
-             bs=512 \
-             conv=sync
+          test "$(stat -c%s build/boot.bin)" -eq 512
+          test "$(stat -c%s build/kernel.bin)" -eq 1024
 
       - name: Create SafirOS image
         run: |
-          cat build/boot.bin build/kernel-sector.bin > build/SafirOS.img
+          dd \
+            if=/dev/zero \
+            of=build/SafirOS.img \
+            bs=512 \
+            count=2880
+
+          dd \
+            if=build/boot.bin \
+            of=build/SafirOS.img \
+            bs=512 \
+            seek=0 \
+            conv=notrunc
+
+          dd \
+            if=build/kernel.bin \
+            of=build/SafirOS.img \
+            bs=512 \
+            seek=1 \
+            conv=notrunc
 
       - name: Check files
         run: |
           ls -lh build/
+
           test "$(stat -c%s build/boot.bin)" -eq 512
-          test "$(stat -c%s build/kernel.bin)" -eq 512
-          test "$(stat -c%s build/kernel-sector.bin)" -eq 512
-          test "$(stat -c%s build/SafirOS.img)" -eq 1024
+          test "$(stat -c%s build/kernel.bin)" -eq 1024
+          test "$(stat -c%s build/SafirOS.img)" -eq 1474560
 
       - name: Upload SafirOS image
         uses: actions/upload-artifact@v4
