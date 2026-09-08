@@ -21,14 +21,19 @@
     }
 
     h1 {
-      margin: 0 0 12px;
+      margin: 0 0 16px;
       font-size: 24px;
+    }
+
+    #status {
+      margin-bottom: 16px;
+      white-space: pre-wrap;
     }
 
     #screen_container {
       width: 100%;
       max-width: 1024px;
-      min-height: 480px;
+      height: 480px;
       margin: 0 auto;
       background: #000;
       overflow: hidden;
@@ -44,6 +49,18 @@
       display: none;
       max-width: 100%;
     }
+
+    .ok {
+      color: #7cff7c;
+    }
+
+    .error {
+      color: #ff7070;
+    }
+
+    .info {
+      color: #ffffff;
+    }
   </style>
 
   <script src="https://copy.sh/v86/build/libv86.js"></script>
@@ -53,6 +70,10 @@
 
   <h1>SafirOS</h1>
 
+  <div id="status" class="info">
+SafirOS.img を確認しています...
+  </div>
+
   <div id="screen_container">
     <div></div>
     <canvas></canvas>
@@ -61,44 +82,121 @@
   <script>
     "use strict";
 
-    window.addEventListener("load", function () {
-      const screenContainer =
-        document.getElementById("screen_container");
+    const status = document.getElementById("status");
+    const screenContainer =
+      document.getElementById("screen_container");
 
-      const canvas =
-        screenContainer.querySelector("canvas");
+    function setStatus(message, className) {
+      status.textContent = message;
+      status.className = className || "info";
+    }
 
-      window.emulator = new V86({
-        wasm_path:
-          "https://copy.sh/v86/build/v86.wasm",
+    async function startSafirOS() {
+      const imageUrl = "SafirOS.img";
 
-        memory_size: 16 * 1024 * 1024,
+      try {
+        setStatus(
+          "① SafirOS.img を取得しています...",
+          "info"
+        );
 
-        vga_memory_size:
-          2 * 1024 * 1024,
+        const response = await fetch(
+          imageUrl + "?t=" + Date.now(),
+          {
+            cache: "no-store"
+          }
+        );
 
-        screen_container:
-          screenContainer,
+        setStatus(
+          "① HTTPステータス: " + response.status,
+          response.ok ? "ok" : "error"
+        );
 
-        canvas: canvas,
+        if (!response.ok) {
+          throw new Error(
+            "SafirOS.img を取得できませんでした。HTTP " +
+            response.status
+          );
+        }
 
-        bios: {
-          url:
-            "https://copy.sh/v86/bios/seabios.bin"
-        },
+        setStatus(
+          "① HTTPステータス: 200 OK\n" +
+          "② ファイルを読み込んでいます...",
+          "ok"
+        );
 
-        vga_bios: {
-          url:
-            "https://copy.sh/v86/bios/vgabios.bin"
-        },
+        const buffer = await response.arrayBuffer();
 
-        fda: {
-          url: "SafirOS.img"
-        },
+        const size = buffer.byteLength;
 
-        autostart: true
-      });
-    });
+        setStatus(
+          "① HTTPステータス: 200 OK\n" +
+          "② SafirOS.img サイズ: " + size + " bytes",
+          size === 512 ? "ok" : "error"
+        );
+
+        if (size !== 512) {
+          throw new Error(
+            "SafirOS.img のサイズが512バイトではありません。"
+          );
+        }
+
+        setStatus(
+          "① HTTPステータス: 200 OK\n" +
+          "② SafirOS.img サイズ: 512 bytes\n" +
+          "③ SafirOS.img は正常に取得できました。\n" +
+          "④ v86 を起動しています...",
+          "ok"
+        );
+
+        const canvas =
+          screenContainer.querySelector("canvas");
+
+        window.emulator = new V86({
+          wasm_path:
+            "https://copy.sh/v86/build/v86.wasm",
+
+          memory_size:
+            16 * 1024 * 1024,
+
+          vga_memory_size:
+            2 * 1024 * 1024,
+
+          screen_container:
+            screenContainer,
+
+          bios: {
+            url:
+              "https://copy.sh/v86/bios/seabios.bin"
+          },
+
+          vga_bios: {
+            url:
+              "https://copy.sh/v86/bios/vgabios.bin"
+          },
+
+          fda: {
+            url: imageUrl
+          },
+
+          autostart: true
+        });
+
+      } catch (error) {
+        console.error(error);
+
+        setStatus(
+          "エラー\n\n" +
+          error.message,
+          "error"
+        );
+      }
+    }
+
+    window.addEventListener(
+      "load",
+      startSafirOS
+    );
   </script>
 
 </body>
