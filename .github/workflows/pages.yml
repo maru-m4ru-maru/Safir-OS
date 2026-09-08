@@ -36,33 +36,65 @@ jobs:
       - name: Build bootloader
         run: |
           mkdir -p build
-          nasm -f bin boot/boot.asm -o build/boot.bin
+
+          nasm \
+            -f bin \
+            boot/boot.asm \
+            -o build/boot.bin
 
       - name: Build kernel
         run: |
-          nasm -f bin kernel/kernel.asm -o build/kernel.bin
+          nasm \
+            -f bin \
+            kernel/kernel.asm \
+            -o build/kernel.bin
 
       - name: Pad kernel
         run: |
-          dd if=build/kernel.bin \
-             of=build/kernel-sector.bin \
-             bs=512 \
-             conv=sync
+          dd \
+            if=build/kernel.bin \
+            of=build/kernel-sector.bin \
+            bs=512 \
+            conv=sync
 
-      - name: Create SafirOS image
+      - name: Check bootloader and kernel
+        run: |
+          test "$(stat -c%s build/boot.bin)" -eq 512
+          test "$(stat -c%s build/kernel.bin)" -eq 512
+          test "$(stat -c%s build/kernel-sector.bin)" -eq 512
+
+      - name: Create SafirOS floppy image
         run: |
           mkdir -p site
 
-          cat \
-            build/boot.bin \
-            build/kernel-sector.bin \
-            > site/SafirOS.img
+          # 1.44 MB floppy disk image
+          dd \
+            if=/dev/zero \
+            of=site/SafirOS.img \
+            bs=512 \
+            count=2880
 
-      - name: Check image
+          # Sector 1: bootloader
+          dd \
+            if=build/boot.bin \
+            of=site/SafirOS.img \
+            bs=512 \
+            seek=0 \
+            conv=notrunc
+
+          # Sector 2: kernel
+          dd \
+            if=build/kernel.bin \
+            of=site/SafirOS.img \
+            bs=512 \
+            seek=1 \
+            conv=notrunc
+
+      - name: Check SafirOS image
         run: |
           ls -lh site/SafirOS.img
 
-          test "$(stat -c%s site/SafirOS.img)" -eq 1024
+          test "$(stat -c%s site/SafirOS.img)" -eq 1474560
 
       - name: Copy website
         run: |
