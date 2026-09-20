@@ -1,12 +1,11 @@
-ENTRY(start)
+ENTRY(rust_main)
 
 SECTIONS
 {
-    . = 0x10000;
+    . = 0x11000;
 
     .text : ALIGN(16)
     {
-        KEEP(*(.text.start))
         *(.text*)
     }
 
@@ -24,5 +23,12 @@ SECTIONS
     {
         *(COMMON)
         *(.bss*)
+    }
+
+    /DISCARD/ :
+    {
+        *(.eh_frame*)
+        *(.comment*)
+        *(.note*)
     }
 }
