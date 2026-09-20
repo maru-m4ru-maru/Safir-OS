@@ -51,18 +51,22 @@ impl<const WORDS: usize> FrameAllocator<WORDS> {
     }
 
     pub fn allocate_specific(&mut self, frame: PhysFrame) -> bool {
-        let index = self.index_of(frame)?;
-        self.bitmap.allocate_specific(index)
+        match self.index_of(frame) {
+            Some(index) => self.bitmap.allocate_specific(index),
+            None => false,
+        }
     }
 
     pub fn deallocate(&mut self, frame: PhysFrame) -> bool {
-        let index = self.index_of(frame)?;
-        self.bitmap.free_index(index)
+        match self.index_of(frame) {
+            Some(index) => self.bitmap.free_index(index),
+            None => false,
+        }
     }
 
     pub fn is_allocated(&self, frame: PhysFrame) -> Option<bool> {
-        let index = self.index_of(frame)?;
-        self.bitmap.is_allocated(index)
+        self.index_of(frame)
+            .and_then(|index| self.bitmap.is_allocated(index))
     }
 
     fn index_of(&self, frame: PhysFrame) -> Option<usize> {
