@@ -200,11 +200,8 @@ long_mode_start:
     out 0x21, al
     out 0xA1, al
 
-    ; Unmask only IRQ0.
-    mov al, 0xFE
-    out 0x21, al
-
     mov al, 0xFF
+    out 0x21, al
     out 0xA1, al
 
 %ifdef SAFIROS_QEMU_TEST
@@ -230,6 +227,14 @@ long_mode_start:
 
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'S'
+    out 0xE9, al
+%endif
+
+    mov al, 0xFE
+    out 0x21, al
+
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'U'
     out 0xE9, al
 %endif
 
