@@ -24,7 +24,7 @@ jobs:
 
       - name: Test Rust kernel logic
         run: |
-          cargo test --manifest-path kernel/rust/Cargo.toml
+          cargo test --features host-test --manifest-path kernel/rust/Cargo.toml
 
       - name: Verify Dafny specifications
         uses: dafny-lang/setup-dafny-action@v1
