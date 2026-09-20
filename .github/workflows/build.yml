@@ -12,10 +12,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install NASM
+      - name: Install toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y nasm
+          sudo apt-get install -y nasm qemu-system-x86
 
       - name: Build bootloader
         run: |
@@ -26,22 +26,32 @@ jobs:
         run: |
           nasm -f bin kernel/kernel.asm -o build/kernel.bin
 
-      - name: Validate exact binary sizes
+      - name: Validate normal binaries
         run: |
           test "$(stat -c%s build/boot.bin)" -eq 512
           test "$(stat -c%s build/kernel.bin)" -eq 1024
+          test "$(od -An -tx1 -j510 -N2 build/boot.bin | tr -d ' \\n')" = "55aa"
 
-      - name: Validate boot signature
-        run: |
-          test "$(od -An -tx1 -j510 -N2 build/boot.bin | tr -d ' \n')" = "55aa"
-
-      - name: Create SafirOS image
+      - name: Create normal disk image
         run: |
           dd if=/dev/zero of=build/SafirOS.img bs=512 count=2880 status=none
           dd if=build/boot.bin of=build/SafirOS.img bs=512 seek=0 conv=notrunc status=none
           dd if=build/kernel.bin of=build/SafirOS.img bs=512 seek=1 conv=notrunc status=none
-
-      - name: Validate disk image
-        run: |
           test "$(stat -c%s build/SafirOS.img)" -eq 1474560
-          cmp -n 512 build/boot.bin build/SafirOS.img
+
+      - name: Build QEMU test kernel
+        run: |
+          nasm -dSAFIROS_QEMU_TEST -f bin kernel/kernel.asm -o build/kernel-qemu.bin
+          test "$(stat -c%s build/kernel-qemu.bin)" -eq 1024
+          dd if=/dev/zero of=build/SafirOS-qemu.img bs=512 count=2880 status=none
+          dd if=build/boot.bin of=build/SafirOS-qemu.img bs=512 seek=0 conv=notrunc status=none
+          dd if=build/kernel-qemu.bin of=build/SafirOS-qemu.img bs=512 seek=1 conv=notrunc status=none
+
+      - name: Boot 32-bit kernel in QEMU
+        shell: bash
+        run: |
+          set +e
+          timeout 8s qemu-system-i386             -drive file=build/SafirOS-qemu.img,format=raw,if=floppy             -display none             -monitor none             -serial none             -no-reboot             -no-shutdown             -device isa-debug-exit,iobase=0xf4,iosize=0x01
+          rc=$?
+          set -e
+          test "$rc" -eq 33
