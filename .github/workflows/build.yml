@@ -69,4 +69,4 @@ jobs:
 
           test "$rc" -eq 33
           test -f build/debugcon.log
-          grep -q "PICHSTRU" build/debugcon.log
+          grep -q "PICHJREUR" build/debugcon.log
