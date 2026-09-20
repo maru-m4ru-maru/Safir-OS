@@ -2,6 +2,7 @@ bits 16
 org 0x0000
 
 %define KERNEL_BASE     0x00010000
+%define RUST_BASE       0x00011000
 
 ; Low-memory scratch regions. All are below 640 KiB.
 %define EARLY_STACK     0x00070000
@@ -230,6 +231,14 @@ long_mode_start:
     out 0xE9, al
 %endif
 
+    mov rax, RUST_BASE
+    call rax
+
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'R'
+    out 0xE9, al
+%endif
+
     mov al, 0xFE
     out 0x21, al
 
@@ -380,8 +389,6 @@ hex_table     db "0123456789ABCDEF"
 
 timer_ticks   dq 0
 
-; Reserve exactly 16 sectors = 8192 bytes for the kernel.
-%if ($ - $$) > (16 * 512)
-    %error "SafirOS kernel exceeds 16 sectors"
+%if ($ - $) > 4096
+    %error "SafirOS assembly stage exceeds 4 KiB"
 %endif
-times (16 * 512) - ($ - $$) db 0
