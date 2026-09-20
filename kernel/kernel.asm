@@ -229,6 +229,8 @@ long_mode_start:
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'S'
     out 0xE9, al
+    mov al, 'J'
+    out 0xE9, al
 %endif
 
     mov rax, RUST_BASE
@@ -345,6 +347,10 @@ timer_interrupt:
 
 
 default_interrupt:
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'E'
+    out 0xE9, al
+%endif
     cli
     mov rdi, VGA_BASE + (80 * 8)
     mov rsi, KERNEL_BASE + msg_fault
