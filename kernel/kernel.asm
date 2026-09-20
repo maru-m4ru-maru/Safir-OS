@@ -207,6 +207,11 @@ long_mode_start:
     mov al, 0xFF
     out 0xA1, al
 
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'C'
+    out 0xE9, al
+%endif
+
     ; PIT channel 0, mode 3, binary, ~100 Hz.
     mov al, 0x36
     out 0x43, al
@@ -216,7 +221,17 @@ long_mode_start:
     mov al, ah
     out 0x40, al
 
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'H'
+    out 0xE9, al
+%endif
+
     sti
+
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'S'
+    out 0xE9, al
+%endif
 
 .idle:
     hlt
@@ -269,6 +284,10 @@ print_hex64:
 
 
 timer_interrupt:
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'T'
+    out 0xE9, al
+%endif
     push rax
     push rbx
     push rcx
