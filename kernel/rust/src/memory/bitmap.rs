@@ -47,7 +47,7 @@ impl<const WORDS: usize> Bitmap<WORDS> {
         for word_index in 0..WORDS {
             let word = self.bits[word_index];
             if word != u64::MAX {
-                let bit = word.trailing_ones() as usize;
+                let bit = word.trailing_zeros() as usize;
                 self.bits[word_index] |= 1u64 << bit;
                 self.used += 1;
                 return Some(word_index * 64 + bit);
