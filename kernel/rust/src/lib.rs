@@ -14,6 +14,7 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 
 #[unsafe(no_mangle)]
+#[unsafe(link_section = ".text.rust_main")]
 pub extern "C" fn rust_main() {
     let message = b"Rust kernel: OK";
     let row = 10usize;
