@@ -22,6 +22,10 @@ jobs:
           mkdir -p build
           nasm -f bin boot/boot.asm -o build/boot.bin
 
+      - name: Test Rust kernel logic
+        run: |
+          cargo test --manifest-path kernel/rust/Cargo.toml
+
       - name: Build kernel
         run: |
           bash scripts/build-kernel.sh
