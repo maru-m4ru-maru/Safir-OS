@@ -52,6 +52,10 @@ protected_mode_start:
     jmp .print
 
 .done:
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 0x10
+    out 0xF4, al
+%endif
     cli
 .halt:
     hlt
