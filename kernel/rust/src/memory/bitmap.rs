@@ -137,4 +137,46 @@ mod tests {
         assert_eq!(bitmap.allocate(), None);
         assert_eq!(bitmap.used(), 64);
     }
+
+    #[test]
+    fn state_invariants_survive_mixed_operations() {
+        let mut bitmap = Bitmap::<1>::new();
+        let operations = [
+            ("alloc", 0usize),
+            ("alloc", 0),
+            ("specific", 63),
+            ("free", 0),
+            ("specific", 0),
+            ("free", 63),
+            ("alloc", 0),
+            ("alloc", 0),
+        ];
+
+        for (kind, index) in operations {
+            match kind {
+                "alloc" => {
+                    let _ = bitmap.allocate();
+                }
+                "specific" => {
+                    let _ = bitmap.allocate_specific(index);
+                }
+                "free" => {
+                    let _ = bitmap.free_index(index);
+                }
+                _ => unreachable!(),
+            }
+
+            let mut counted = 0usize;
+            for i in 0..Bitmap::<1>::CAPACITY {
+                if bitmap.is_allocated(i) == Some(true) {
+                    counted += 1;
+                }
+            }
+
+            assert_eq!(bitmap.used(), counted);
+            assert_eq!(bitmap.free() + bitmap.used(), Bitmap::<1>::CAPACITY);
+            assert!(!bitmap.is_full() || bitmap.free() == 0);
+            assert!(!bitmap.is_empty() || bitmap.used() == 0);
+        }
+    }
 }
