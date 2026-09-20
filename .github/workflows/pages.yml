@@ -1,16 +1,12 @@
 name: Build and Deploy SafirOS
-
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
   pages: write
   id-token: write
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -33,7 +29,7 @@ jobs:
       - name: Build kernel
         run: |
           nasm -f bin kernel/kernel.asm -o build/kernel.bin
-      - name: Check bootloader and kernel
+      - name: Verify binaries
         run: |
           test "$(stat -c%s build/boot.bin)" -eq 512
           test "$(stat -c%s build/kernel.bin)" -eq 1024
@@ -43,16 +39,12 @@ jobs:
           dd if=/dev/zero of=site/SafirOS.img bs=512 count=2880
           dd if=build/boot.bin of=site/SafirOS.img bs=512 seek=0 conv=notrunc
           dd if=build/kernel.bin of=site/SafirOS.img bs=512 seek=1 conv=notrunc
-      - name: Check SafirOS image
-        run: |
           test "$(stat -c%s site/SafirOS.img)" -eq 1474560
       - name: Copy website
         run: |
           cp web/index.html site/index.html
           cp web/style.css site/style.css
           cp web/app.js site/app.js
-          cp web/exe-runner.html site/exe-runner.html
-          cp web/files.html site/files.html
           cp favicon.svg site/favicon.svg
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
