@@ -23,10 +23,10 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Install NASM
+      - name: Install toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y nasm
+          sudo apt-get install -y nasm binutils
 
       - name: Build bootloader
         run: |
@@ -35,7 +35,7 @@ jobs:
 
       - name: Build kernel
         run: |
-          nasm -f bin kernel/kernel.asm -o build/kernel.bin
+          bash scripts/build-kernel.sh
 
       - name: Validate binaries
         run: |
