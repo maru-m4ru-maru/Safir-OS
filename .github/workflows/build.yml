@@ -70,4 +70,4 @@ jobs:
 
           test "$rc" -eq 33
           test -f build/debugcon.log
-          grep -q "PLIT" build/debugcon.log
+          grep -q "PICHST" build/debugcon.log
