@@ -1,12 +1,14 @@
 #![no_std]
 
-mod memory;
+pub mod memory;
 mod vga;
 
 #[cfg(not(test))]
 use core::panic::PanicInfo;
 
 #[cfg(not(test))]
+pub use memory::Bitmap;
+
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {
