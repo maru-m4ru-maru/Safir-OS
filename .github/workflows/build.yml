@@ -15,7 +15,7 @@ jobs:
       - name: Install toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y nasm qemu-system-x86
+          sudo apt-get install -y nasm qemu-system-x86 binutils
 
       - name: Build bootloader
         run: |
@@ -24,12 +24,13 @@ jobs:
 
       - name: Build kernel
         run: |
-          nasm -f bin kernel/kernel.asm -o build/kernel.bin
+          bash scripts/build-kernel.sh
 
       - name: Validate binaries
         run: |
           test "$(stat -c%s build/boot.bin)" -eq 512
           test "$(stat -c%s build/kernel.bin)" -eq 8192
+          test "$(stat -c%s build/kernel-qemu.bin)" -eq 8192
           test "$(od -An -tx1 -j510 -N2 build/boot.bin | tr -d ' \\n')" = "55aa"
 
       - name: Create disk image
@@ -39,15 +40,13 @@ jobs:
           dd if=build/kernel.bin of=build/SafirOS.img bs=512 seek=1 conv=notrunc status=none
           test "$(stat -c%s build/SafirOS.img)" -eq 1474560
 
-      - name: Build QEMU test kernel
+      - name: Create QEMU disk image
         run: |
-          nasm -dSAFIROS_QEMU_TEST -f bin kernel/kernel.asm -o build/kernel-qemu.bin
-          test "$(stat -c%s build/kernel-qemu.bin)" -eq 8192
           dd if=/dev/zero of=build/SafirOS-qemu.img bs=512 count=2880 status=none
           dd if=build/boot.bin of=build/SafirOS-qemu.img bs=512 seek=0 conv=notrunc status=none
           dd if=build/kernel-qemu.bin of=build/SafirOS-qemu.img bs=512 seek=1 conv=notrunc status=none
 
-      - name: Boot Long Mode and PIT under QEMU
+      - name: Boot Rust kernel, Long Mode and PIT under QEMU
         shell: bash
         run: |
           set +e
@@ -70,4 +69,4 @@ jobs:
 
           test "$rc" -eq 33
           test -f build/debugcon.log
-          grep -q "PICHST" build/debugcon.log
+          grep -q "PICHSTRU" build/debugcon.log
