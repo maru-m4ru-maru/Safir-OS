@@ -1,4 +1,4 @@
-module SafirOS.BitmapSpec
+module SafirOS.BitmapSpec {
 
 const Capacity: nat := 128
 
@@ -73,4 +73,6 @@ method AllocateThenFree(allocated: set<nat>, index: nat)
   var back, freed := FreeSpecific(changed, index);
   assert freed;
   restored := back;
+}
+
 }
