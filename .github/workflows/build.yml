@@ -26,6 +26,17 @@ jobs:
         run: |
           cargo test --manifest-path kernel/rust/Cargo.toml
 
+      - name: Verify Dafny specifications
+        uses: dafny-lang/setup-dafny-action@v1
+        with:
+          dafny-version: "4.11.0"
+
+      - name: Dafny verify
+        run: |
+          dafny verify verification/bitmap.dfy
+          dafny audit verification/bitmap.dfy
+
+
       - name: Build kernel
         run: |
           bash scripts/build-kernel.sh
