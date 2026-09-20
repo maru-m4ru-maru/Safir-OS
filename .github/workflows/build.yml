@@ -37,6 +37,10 @@ jobs:
           dafny audit verification/bitmap.dfy
 
 
+      - name: Differential test Dafny vs Rust bitmap
+        run: |
+          bash scripts/test-bitmap-differential.sh
+
       - name: Build kernel
         run: |
           bash scripts/build-kernel.sh
