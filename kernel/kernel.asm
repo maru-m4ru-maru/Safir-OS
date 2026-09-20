@@ -171,7 +171,7 @@ long_mode_start:
     mov dword [rdi + 8], eax
     mov dword [rdi + 12], 0
 
-    lidt [idtr]
+    lidt [KERNEL_BASE + idtr]
 
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'I'
