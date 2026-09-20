@@ -1,5 +1,6 @@
 #![no_std]
 
+mod memory;
 mod vga;
 
 use core::panic::PanicInfo;
@@ -14,6 +15,9 @@ fn panic(_info: &PanicInfo) -> ! {
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".text.rust_main")]
 pub extern "C" fn rust_main() {
+    let mut frames = memory::Bitmap::<2>::new();
+    let _ = frames.allocate();
+
     let mut writer = vga::Writer::new();
     writer.clear();
     writer.write_bytes(b"SafirOS Rust Kernel\n");
