@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SafirOS EXE Runner</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#101010;color:#ddd;font-family:system-ui,sans-serif}
+header{height:52px;display:flex;align-items:center;gap:12px;padding:0 16px;background:#1b1b1b;border-bottom:1px solid #3b3b3b}
+h1{font-size:17px;margin:0}
+button,a{color:#fff;background:#292929;border:1px solid #555;border-radius:6px;padding:8px 12px;text-decoration:none;cursor:pointer}
+main{height:calc(100% - 52px);padding:12px;display:flex;flex-direction:column;gap:10px}
+.note{font-size:13px;color:#aaa}
+iframe{flex:1;width:100%;border:1px solid #444;border-radius:8px;background:#000}
+</style>
+</head>
+<body>
+<header>
+<h1>SafirOS — EXE Runner</h1>
+<a href="https://www.boxedwine.org/app/wine-shell/" target="_blank" rel="noopener">別タブで開く</a>
+</header>
+<main>
+<div class="note">Boxedwineを使用してブラウザ内でWindows 16/32-bitアプリを実行します。互換性と速度には制限があります。</div>
+<iframe src="https://www.boxedwine.org/app/wine-shell/" title="Boxedwine WINE shell" allow="fullscreen"></iframe>
+</main>
+</body>
+</html>
