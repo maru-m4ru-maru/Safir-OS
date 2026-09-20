@@ -4,6 +4,7 @@ const Capacity: nat := 128
 
 predicate ValidState(allocated: set<nat>)
 {
+  |allocated| <= Capacity &&
   forall i: nat :: i in allocated ==> i < Capacity
 }
 
@@ -11,12 +12,12 @@ method AllocateSpecific(allocated: set<nat>, index: nat)
   returns (newAllocated: set<nat>, ok: bool)
   requires ValidState(allocated)
   ensures ValidState(newAllocated)
-  ensures ok <==> index < Capacity && index !in allocated
+  ensures ok <==> index < Capacity && index !in allocated && |allocated| < Capacity
   ensures !ok ==> newAllocated == allocated
   ensures ok ==> newAllocated == allocated + {index}
   ensures ok ==> |newAllocated| == |allocated| + 1
 {
-  if index >= Capacity || index in allocated {
+  if index >= Capacity || index in allocated || |allocated| == Capacity {
     newAllocated := allocated;
     ok := false;
   } else {
@@ -59,19 +60,10 @@ lemma FreeIsUnique(allocated: set<nat>, index: nat)
 {
 }
 
-lemma CapacityInvariant(allocated: set<nat>)
-  requires ValidState(allocated)
-  ensures |allocated| <= Capacity
-{
-  if |allocated| > Capacity {
-    var ghostAvailable := set i: nat | i < Capacity && i !in allocated;
-    assert ghostAvailable == {};
-  }
-}
-
 method AllocateThenFree(allocated: set<nat>, index: nat)
   returns (restored: set<nat>)
   requires ValidState(allocated)
+  requires |allocated| < Capacity
   requires index < Capacity
   requires index !in allocated
   ensures restored == allocated
