@@ -6,7 +6,7 @@ mkdir -p build
 rustup target add x86_64-unknown-none
 cargo build --manifest-path kernel/rust/Cargo.toml --release --target x86_64-unknown-none
 
-rust-lld -flavor gnu \
+ld.lld \
   -T kernel/linker.ld \
   -o build/rust.elf \
   kernel/rust/target/x86_64-unknown-none/release/libsafiros_kernel.a
