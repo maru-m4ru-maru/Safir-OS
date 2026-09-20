@@ -3,8 +3,11 @@ name = "safiros-kernel"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+host-test = []
+
 [lib]
-crate-type = ["staticlib"]
+crate-type = ["rlib", "staticlib"]
 
 [profile.dev]
 panic = "abort"
