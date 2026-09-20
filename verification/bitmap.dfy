@@ -1,64 +1,64 @@
 module BitmapSpec {
 
-predicate ValidState(allocated: set<nat>)
+predicate ValidState(usedSet: set<nat>)
 {
-  |allocated| <= 128 &&
-  forall i: nat :: i in allocated ==> i < 128
+  |usedSet| <= 128 &&
+  forall i: nat :: i in usedSet ==> i < 128
 }
 
-method AllocateSpecific(allocated: set<nat>, index: nat)
-  returns (newAllocated: set<nat>, ok: bool)
-  requires ValidState(allocated)
-  ensures ValidState(newAllocated)
-  ensures ok <==> index < 128 && index !in allocated && |allocated| < 128
-  ensures !ok ==> newAllocated == allocated
-  ensures ok ==> newAllocated == allocated + {index}
-  ensures ok ==> |newAllocated| == |allocated| + 1
+method AllocateSpecific(usedSet: set<nat>, index: nat)
+  returns (newSet: set<nat>, ok: bool)
+  requires ValidState(usedSet)
+  ensures ValidState(newSet)
+  ensures ok <==> index < 128 && index !in usedSet && |usedSet| < 128
+  ensures !ok ==> newSet == usedSet
+  ensures ok ==> newSet == usedSet + {index}
+  ensures ok ==> |newSet| == |usedSet| + 1
 {
-  if index >= 128 || index in allocated || |allocated| == 128 {
-    newAllocated := allocated;
+  if index >= 128 || index in usedSet || |usedSet| == 128 {
+    newSet := usedSet;
     ok := false;
   } else {
-    newAllocated := allocated + {index};
+    newSet := usedSet + {index};
     ok := true;
   }
 }
 
-method FreeSpecific(allocated: set<nat>, index: nat)
-  returns (newAllocated: set<nat>, ok: bool)
-  requires ValidState(allocated)
-  ensures ValidState(newAllocated)
-  ensures ok <==> index < 128 && index in allocated
-  ensures !ok ==> newAllocated == allocated
-  ensures ok ==> newAllocated == allocated - {index}
-  ensures ok ==> |newAllocated| + 1 == |allocated|
+method FreeSpecific(usedSet: set<nat>, index: nat)
+  returns (newSet: set<nat>, ok: bool)
+  requires ValidState(usedSet)
+  ensures ValidState(newSet)
+  ensures ok <==> index < 128 && index in usedSet
+  ensures !ok ==> newSet == usedSet
+  ensures ok ==> newSet == usedSet - {index}
+  ensures ok ==> |newSet| + 1 == |usedSet|
 {
-  if index >= 128 || index !in allocated {
-    newAllocated := allocated;
+  if index >= 128 || index !in usedSet {
+    newSet := usedSet;
     ok := false;
   } else {
-    newAllocated := allocated - {index};
+    newSet := usedSet - {index};
     ok := true;
   }
 }
 
-lemma AllocationIsUnique(allocated: set<nat>, index: nat)
-  requires ValidState(allocated)
+lemma AllocationIsUnique(usedSet: set<nat>, index: nat)
+  requires ValidState(usedSet)
   requires index < 128
-  ensures index in allocated ==> (allocated + {index}) == allocated
-  ensures index !in allocated ==> |allocated + {index}| == |allocated| + 1
+  ensures index in usedSet ==> (usedSet + {index}) == usedSet
+  ensures index !in usedSet ==> |usedSet + {index}| == |usedSet| + 1
 {
 }
 
-method AllocateThenFree(allocated: set<nat>, index: nat)
+method AllocateThenFree(usedSet: set<nat>, index: nat)
   returns (restored: set<nat>)
-  requires ValidState(allocated)
-  requires |allocated| < 128
+  requires ValidState(usedSet)
+  requires |usedSet| < 128
   requires index < 128
-  requires index !in allocated
-  ensures restored == allocated
+  requires index !in usedSet
+  ensures restored == usedSet
 {
-  var changed, ok := AllocateSpecific(allocated, index);
+  var changed, ok := AllocateSpecific(usedSet, index);
   assert ok;
   var back, freed := FreeSpecific(changed, index);
   assert freed;
