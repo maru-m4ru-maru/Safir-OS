@@ -2,12 +2,12 @@ name: Build SafirOS
 
 on:
   push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,43 +26,22 @@ jobs:
         run: |
           nasm -f bin kernel/kernel.asm -o build/kernel.bin
 
-      - name: Check bootloader and kernel
+      - name: Validate exact binary sizes
         run: |
           test "$(stat -c%s build/boot.bin)" -eq 512
           test "$(stat -c%s build/kernel.bin)" -eq 1024
+
+      - name: Validate boot signature
+        run: |
+          test "$(od -An -tx1 -j510 -N2 build/boot.bin | tr -d ' \n')" = "55aa"
 
       - name: Create SafirOS image
         run: |
-          dd \
-            if=/dev/zero \
-            of=build/SafirOS.img \
-            bs=512 \
-            count=2880
+          dd if=/dev/zero of=build/SafirOS.img bs=512 count=2880 status=none
+          dd if=build/boot.bin of=build/SafirOS.img bs=512 seek=0 conv=notrunc status=none
+          dd if=build/kernel.bin of=build/SafirOS.img bs=512 seek=1 conv=notrunc status=none
 
-          dd \
-            if=build/boot.bin \
-            of=build/SafirOS.img \
-            bs=512 \
-            seek=0 \
-            conv=notrunc
-
-          dd \
-            if=build/kernel.bin \
-            of=build/SafirOS.img \
-            bs=512 \
-            seek=1 \
-            conv=notrunc
-
-      - name: Check files
+      - name: Validate disk image
         run: |
-          ls -lh build/
-
-          test "$(stat -c%s build/boot.bin)" -eq 512
-          test "$(stat -c%s build/kernel.bin)" -eq 1024
           test "$(stat -c%s build/SafirOS.img)" -eq 1474560
-
-      - name: Upload SafirOS image
-        uses: actions/upload-artifact@v4
-        with:
-          name: SafirOS
-          path: build/SafirOS.img
+          cmp -n 512 build/boot.bin build/SafirOS.img
