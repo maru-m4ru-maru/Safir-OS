@@ -15,7 +15,7 @@ jobs:
       - name: Install toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y nasm qemu-system-x86 binutils
+          sudo apt-get install -y nasm qemu-system-x86 binutils lld
 
       - name: Build bootloader
         run: |
