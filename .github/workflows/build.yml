@@ -64,6 +64,10 @@ jobs:
           rc=$?
           set -e
 
+          echo "QEMU exit code: $rc"
+          echo "debugcon output:"
+          cat build/debugcon.log 2>/dev/null || true
+
           test "$rc" -eq 33
           test -f build/debugcon.log
           grep -q "PLIT" build/debugcon.log
