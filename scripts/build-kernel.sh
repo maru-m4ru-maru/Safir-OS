@@ -4,13 +4,14 @@ set -euo pipefail
 mkdir -p build
 
 rustup target add x86_64-unknown-none
-cargo build --manifest-path kernel/rust/Cargo.toml --release --target x86_64-unknown-none
+RUSTFLAGS='-C relocation-model=static' cargo build --manifest-path kernel/rust/Cargo.toml --release --target x86_64-unknown-none
 
 ld.lld \
   -T kernel/linker.ld \
   -o build/rust.elf \
   kernel/rust/target/x86_64-unknown-none/release/libsafiros_kernel.a
 
+nm -n build/rust.elf | awk '$3=="rust_main" {print $1}' | grep -qx '0000000000011000'
 objcopy -O binary build/rust.elf build/rust.bin
 
 test "$(stat -c%s build/rust.bin)" -gt 0
