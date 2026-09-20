@@ -254,7 +254,7 @@ vga_print:
 ; ------------------------------------------------------------
 print_hex64:
     mov rdx, rax
-    lea rbx, [KERNEL_BASE + hex_table]
+    mov rbx, KERNEL_BASE + hex_table
     mov rcx, 16
 .hex_loop:
     mov rax, rdx
