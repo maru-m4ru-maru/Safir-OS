@@ -6,6 +6,7 @@ SECTIONS
 
     .text : ALIGN(16)
     {
+        KEEP(*(.text.rust_main))
         *(.text*)
     }
 
@@ -31,4 +32,6 @@ SECTIONS
         *(.comment*)
         *(.note*)
     }
+
+    ASSERT(ADDR(.text) == 0x11000, "Rust text must start at 0x11000")
 }
