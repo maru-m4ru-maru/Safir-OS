@@ -4,7 +4,7 @@ set -euo pipefail
 mkdir -p build
 
 rustup target add x86_64-unknown-none
-RUSTFLAGS='-C relocation-model=static -C red-zone=no' cargo build --manifest-path kernel/rust/Cargo.toml --release --target x86_64-unknown-none
+RUSTFLAGS='-C relocation-model=static' cargo build --manifest-path kernel/rust/Cargo.toml --release --target x86_64-unknown-none
 
 ld.lld \
   --gc-sections \
