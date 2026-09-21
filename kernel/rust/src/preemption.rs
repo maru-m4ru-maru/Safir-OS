@@ -78,8 +78,8 @@ impl RuntimeState {
         Self {
             scheduler: Scheduler::new(),
             tasks: [
-                Task::new(1, CpuContext::new(TASK_A_STACK_TOP as u64, preempt_task_a as usize as u64)),
-                Task::new(2, CpuContext::new(TASK_B_STACK_TOP as u64, preempt_task_b as usize as u64)),
+                Task::new(1, CpuContext::new(TASK_A_STACK_TOP as u64, 1)),
+                Task::new(2, CpuContext::new(TASK_B_STACK_TOP as u64, 1)),
             ],
             frames: [0, 0],
             trace_enabled: false,
@@ -274,7 +274,6 @@ pub unsafe extern "C" fn preempt_timer_tick(ctx: *mut InterruptContext) -> *mut 
         }
     }
 
-    let _ = current_id;
     runtime.frames[next] as *mut InterruptContext
 }
 
