@@ -56,12 +56,18 @@ safiros_context_switch_smoke_test:
     mov rbx, 0xB1B1B1B1B1B1B1B1
     mov rbp, 0xA1A1A1A1A1A1A1A1
 
-    mov qword ptr [CTX_B + 0], 0x2525252525252525
-    mov qword ptr [CTX_B + 8], 0x2424242424242424
-    mov qword ptr [CTX_B + 16], 0x2323232323232323
-    mov qword ptr [CTX_B + 24], 0x2222222222222222
-    mov qword ptr [CTX_B + 32], 0xC1C1C1C1C1C1C1C1
-    mov qword ptr [CTX_B + 40], 0xD1D1D1D1D1D1D1D1
+    mov rax, 0x2525252525252525
+    mov qword ptr [CTX_B + 0], rax
+    mov rax, 0x2424242424242424
+    mov qword ptr [CTX_B + 8], rax
+    mov rax, 0x2323232323232323
+    mov qword ptr [CTX_B + 16], rax
+    mov rax, 0x2222222222222222
+    mov qword ptr [CTX_B + 24], rax
+    mov rax, 0xC1C1C1C1C1C1C1C1
+    mov qword ptr [CTX_B + 32], rax
+    mov rax, 0xD1D1D1D1D1D1D1D1
+    mov qword ptr [CTX_B + 40], rax
     mov qword ptr [CTX_B + 48], TEST_STACK_B_TOP - 8
 
     lea rax, [rip + context_test_b]
@@ -75,17 +81,23 @@ safiros_context_switch_smoke_test:
     mov rsi, CTX_B
     call safiros_context_switch
 
-    cmp r15, 0x1515151515151515
+    mov rax, 0x1515151515151515
+    cmp r15, rax
     jne context_test_fail
-    cmp r14, 0x1414141414141414
+    mov rax, 0x1414141414141414
+    cmp r14, rax
     jne context_test_fail
-    cmp r13, 0x1313131313131313
+    mov rax, 0x1313131313131313
+    cmp r13, rax
     jne context_test_fail
-    cmp r12, 0x1212121212121212
+    mov rax, 0x1212121212121212
+    cmp r12, rax
     jne context_test_fail
-    cmp rbx, 0xB1B1B1B1B1B1B1B1
+    mov rax, 0xB1B1B1B1B1B1B1B1
+    cmp rbx, rax
     jne context_test_fail
-    cmp rbp, 0xA1A1A1A1A1A1A1A1
+    mov rax, 0xA1A1A1A1A1A1A1A1
+    cmp rbp, rax
     jne context_test_fail
 
     mov al, 'X'
@@ -95,17 +107,23 @@ safiros_context_switch_smoke_test:
     mov rsi, CTX_B
     call safiros_context_switch
 
-    cmp r15, 0x1515151515151515
+    mov rax, 0x1515151515151515
+    cmp r15, rax
     jne context_test_fail
-    cmp r14, 0x1414141414141414
+    mov rax, 0x1414141414141414
+    cmp r14, rax
     jne context_test_fail
-    cmp r13, 0x1313131313131313
+    mov rax, 0x1313131313131313
+    cmp r13, rax
     jne context_test_fail
-    cmp r12, 0x1212121212121212
+    mov rax, 0x1212121212121212
+    cmp r12, rax
     jne context_test_fail
-    cmp rbx, 0xB1B1B1B1B1B1B1B1
+    mov rax, 0xB1B1B1B1B1B1B1B1
+    cmp rbx, rax
     jne context_test_fail
-    cmp rbp, 0xA1A1A1A1A1A1A1A1
+    mov rax, 0xA1A1A1A1A1A1A1A1
+    cmp rbp, rax
     jne context_test_fail
 
 context_test_done:
@@ -124,17 +142,23 @@ context_test_b:
     cmp rax, 0x2
     jne context_test_fail
 
-    cmp r15, 0x2525252525252525
+    mov rax, 0x2525252525252525
+    cmp r15, rax
     jne context_test_fail
-    cmp r14, 0x2424242424242424
+    mov rax, 0x2424242424242424
+    cmp r14, rax
     jne context_test_fail
-    cmp r13, 0x2323232323232323
+    mov rax, 0x2323232323232323
+    cmp r13, rax
     jne context_test_fail
-    cmp r12, 0x2222222222222222
+    mov rax, 0x2222222222222222
+    cmp r12, rax
     jne context_test_fail
-    cmp rbx, 0xC1C1C1C1C1C1C1C1
+    mov rax, 0xC1C1C1C1C1C1C1C1
+    cmp rbx, rax
     jne context_test_fail
-    cmp rbp, 0xD1D1D1D1D1D1D1D1
+    mov rax, 0xD1D1D1D1D1D1D1D1
+    cmp rbp, rax
     jne context_test_fail
 
     mov al, 'T'
@@ -144,17 +168,23 @@ context_test_b:
     mov rsi, CTX_A
     call safiros_context_switch
 
-    cmp r15, 0x2525252525252525
+    mov rax, 0x2525252525252525
+    cmp r15, rax
     jne context_test_fail
-    cmp r14, 0x2424242424242424
+    mov rax, 0x2424242424242424
+    cmp r14, rax
     jne context_test_fail
-    cmp r13, 0x2323232323232323
+    mov rax, 0x2323232323232323
+    cmp r13, rax
     jne context_test_fail
-    cmp r12, 0x2222222222222222
+    mov rax, 0x2222222222222222
+    cmp r12, rax
     jne context_test_fail
-    cmp rbx, 0xC1C1C1C1C1C1C1C1
+    mov rax, 0xC1C1C1C1C1C1C1C1
+    cmp rbx, rax
     jne context_test_fail
-    cmp rbp, 0xD1D1D1D1D1D1D1D1
+    mov rax, 0xD1D1D1D1D1D1D1D1
+    cmp rbp, rax
     jne context_test_fail
 
     mov al, 'S'
