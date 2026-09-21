@@ -213,6 +213,9 @@ unsafe fn task_frame(stack_top: usize, rip: usize) -> usize {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn preempt_task_a() -> ! {
+    unsafe {
+        asm!("sti", options(nomem, nostack));
+    }
     loop {
         unsafe {
             asm!("hlt", options(nomem, nostack, preserves_flags));
@@ -222,6 +225,9 @@ pub extern "C" fn preempt_task_a() -> ! {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn preempt_task_b() -> ! {
+    unsafe {
+        asm!("sti", options(nomem, nostack));
+    }
     loop {
         unsafe {
             asm!("hlt", options(nomem, nostack, preserves_flags));
