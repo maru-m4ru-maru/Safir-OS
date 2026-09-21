@@ -6,7 +6,15 @@ mod vga;
 #[cfg(not(feature = "host-test"))]
 use core::panic::PanicInfo;
 
-pub use memory::{Bitmap, E820Entry, MemoryMap, MemoryRegion};
+pub use memory::{
+    Bitmap,
+    E820Entry,
+    FrameAllocator,
+    MemoryMap,
+    MemoryRegion,
+    PhysicalMemoryManager,
+    PhysFrame,
+};
 
 #[cfg(not(feature = "host-test"))]
 #[panic_handler]
@@ -23,15 +31,29 @@ pub extern "C" fn rust_main(e820_ptr: u64, e820_len: usize) {
         MemoryMap::<32>::from_raw(e820_ptr as *const E820Entry, e820_len)
     };
 
+    let mut physical_memory = PhysicalMemoryManager::<4096>::from_memory_map(&memory_map);
+
+    physical_memory.reserve_range(0x00006000, 32 * 24);
+    physical_memory.reserve_range(0x00010000, 8192);
+    physical_memory.reserve_range(0x0006C000, 0x4000);
+    physical_memory.reserve_range(0x00080000, 0x1000);
+    physical_memory.reserve_range(0x00090000, 0x3000);
+    physical_memory.reserve_range(0x000B8000, 0x1000);
+
     let mut writer = vga::Writer::new();
     writer.clear();
-    writer.write_bytes(b"SafirOS Rust Kernel
-");
-    writer.write_bytes(b"Kernel Core: OK
-");
+    writer.write_bytes(b"SafirOS Rust Kernel\n");
+    writer.write_bytes(b"Kernel Core: OK\n");
+
     if memory_map.is_empty() {
-        writer.write_bytes(b"Memory Map: EMPTY");
+        writer.write_bytes(b"Memory Map: EMPTY\n");
     } else {
-        writer.write_bytes(b"Memory Map: OK");
+        writer.write_bytes(b"Memory Map: OK\n");
+    }
+
+    if physical_memory.free_frames() > 0 {
+        writer.write_bytes(b"Physical Memory: OK");
+    } else {
+        writer.write_bytes(b"Physical Memory: EMPTY");
     }
 }
