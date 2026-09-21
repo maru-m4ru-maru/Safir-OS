@@ -431,7 +431,6 @@ hex_table     db "0123456789ABCDEF"
 
 timer_ticks   dq 0
 e820_count    dw 0
-preempt_hook  dq 0
 
 %if ($ - $) > 4096
     %error "SafirOS assembly stage exceeds 4 KiB"
