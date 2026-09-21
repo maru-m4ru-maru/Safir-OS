@@ -114,6 +114,13 @@ jobs:
           objdump -d --start-address="$START" --stop-address="$STOP" build/rust.elf
           echo "preempt_timer_tick=$HOOK_ADDR"
 
+      - name: Inspect preemption machine code
+        run: |
+          echo "Symbols near preemption"
+          nm -n build/rust.elf | awk '$1 >= "0000000000011D00" && $1 <= "0000000000012000" {print}'
+          echo "Disassembly around failing address"
+          objdump -d --start-address=0x11e20 --stop-address=0x11e70 build/rust.elf
+
       - name: Validate binaries
         run: |
           test "$(stat -c%s build/boot.bin)" -eq 512
