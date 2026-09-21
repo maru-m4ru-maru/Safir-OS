@@ -394,6 +394,7 @@ timer_interrupt:
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'C'
     out 0xE9, al
+    call debugcon_hex64
 %endif
 
     lea rsp, [PREEMPT_STACK_TOP - 8]
