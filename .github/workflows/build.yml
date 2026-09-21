@@ -70,8 +70,7 @@ jobs:
           test "$(stat -c%s build/boot.bin)" -eq 512
           test "$(stat -c%s build/kernel.bin)" -eq 16384
           test "$(stat -c%s build/kernel-qemu.bin)" -eq 16384
-          test "$(od -An -tx1 -j510 -N2 build/boot.bin | tr -d ' 
-')" = "55aa"
+          test "$(od -An -tx1 -j510 -N2 build/boot.bin | tr -d ' \n')" = "55aa"
 
       - name: Create disk image
         run: |
@@ -90,7 +89,16 @@ jobs:
         shell: bash
         run: |
           set +e
-          timeout 12s qemu-system-x86_64             -drive file=build/SafirOS-qemu.img,format=raw,if=floppy             -display none             -monitor none             -serial none             -no-reboot             -no-shutdown             -debugcon file:build/debugcon.log             -global isa-debugcon.iobase=0xe9             -device isa-debug-exit,iobase=0xf4,iosize=0x01
+          timeout 12s qemu-system-x86_64 \
+            -drive file=build/SafirOS-qemu.img,format=raw,if=floppy \
+            -display none \
+            -monitor none \
+            -serial none \
+            -no-reboot \
+            -no-shutdown \
+            -debugcon file:build/debugcon.log \
+            -global isa-debugcon.iobase=0xe9 \
+            -device isa-debug-exit,iobase=0xf4,iosize=0x01
           rc=$?
           set -e
 
