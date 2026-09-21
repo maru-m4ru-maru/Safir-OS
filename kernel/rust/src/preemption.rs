@@ -116,6 +116,7 @@ safiros_preemptive_start:
     pop rax
 
     mov r10, rsp
+    lea r11, [rip + safiros_hex]
     mov al, 'I'
     out 0xE9, al
 
@@ -125,7 +126,7 @@ safiros_preemptive_start:
 .iretd_rip:
     mov rax, rdx
     shr rax, 60
-    mov al, [safiros_hex + rax]
+    mov al, [r11 + rax]
     out 0xE9, al
     shl rdx, 4
     loop .iretd_rip
@@ -136,7 +137,7 @@ safiros_preemptive_start:
 .iretd_cs:
     mov rax, rdx
     shr rax, 12
-    mov al, [safiros_hex + rax]
+    mov al, [r11 + rax]
     out 0xE9, al
     shl rdx, 4
     loop .iretd_cs
@@ -147,7 +148,7 @@ safiros_preemptive_start:
 .iretd_flags:
     mov rax, rdx
     shr rax, 60
-    mov al, [safiros_hex + rax]
+    mov al, [r11 + rax]
     out 0xE9, al
     shl rdx, 4
     loop .iretd_flags
