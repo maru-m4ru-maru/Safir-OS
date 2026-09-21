@@ -192,19 +192,6 @@ long_mode_start:
     add rdi, 16
     loop .fill_idt
 
-    ; Override IRQ0 vector 0x20 with the PIT handler.
-    mov rdi, IDT_BASE + (0x20 * 16)
-    mov rax, KERNEL_BASE + timer_interrupt
-    mov word [rdi + 0], ax
-    mov word [rdi + 2], 0x18
-    mov byte [rdi + 4], 0
-    mov byte [rdi + 5], 0x8E
-    shr rax, 16
-    mov word [rdi + 6], ax
-    shr rax, 16
-    mov dword [rdi + 8], eax
-    mov dword [rdi + 12], 0
-
     lidt [KERNEL_BASE + idtr]
 
 %ifdef SAFIROS_QEMU_TEST
@@ -257,12 +244,20 @@ long_mode_start:
     out 0xE9, al
 %endif
 
-    sti
-
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'S'
     out 0xE9, al
     mov al, 'J'
+    out 0xE9, al
+%endif
+
+    mov al, 0xFE
+    out 0x21, al
+
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'R'
+    out 0xE9, al
+    mov al, 'U'
     out 0xE9, al
 %endif
 
@@ -274,19 +269,6 @@ long_mode_start:
 %endif
     mov rax, RUST_BASE
     call rax
-
-%ifdef SAFIROS_QEMU_TEST
-    mov al, 'R'
-    out 0xE9, al
-%endif
-
-    mov al, 0xFE
-    out 0x21, al
-
-%ifdef SAFIROS_QEMU_TEST
-    mov al, 'U'
-    out 0xE9, al
-%endif
 
 .idle:
     hlt
@@ -338,53 +320,6 @@ print_hex64:
     ret
 
 
-timer_interrupt:
-%ifdef SAFIROS_QEMU_TEST
-    mov al, 'T'
-    out 0xE9, al
-%endif
-    push rax
-    push rbx
-    push rcx
-    push rdx
-    push rdi
-    push rsi
-
-    mov rax, [timer_ticks]
-    inc rax
-    mov [timer_ticks], rax
-    mov rsi, rax
-
-    mov rdi, VGA_BASE + (80 * 6) + 14
-    call print_hex64
-
-%ifdef SAFIROS_QEMU_TEST
-    cmp rsi, 1
-    jne .test_exit_check
-    mov al, 'T'
-    out 0xE9, al
-
-.test_exit_check:
-    cmp rsi, 10
-    jb .test_done
-    mov al, 0x10
-    out 0xF4, al
-.test_done:
-%endif
-
-    ; EOI to the master 8259.
-    mov al, 0x20
-    out 0x20, al
-
-    pop rsi
-    pop rdi
-    pop rdx
-    pop rcx
-    pop rbx
-    pop rax
-    iretq
-
-
 default_interrupt:
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'E'
@@ -432,7 +367,6 @@ msg_pit       db "PIT: 100 Hz", 0
 msg_fault     db "EXCEPTION: CPU STOPPED", 0
 hex_table     db "0123456789ABCDEF"
 
-timer_ticks   dq 0
 e820_count    dw 0
 
 %if ($ - $) > 4096
