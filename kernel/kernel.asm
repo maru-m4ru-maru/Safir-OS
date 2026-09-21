@@ -490,19 +490,6 @@ default_interrupt:
     jmp .halt
 
 
-%ifdef SAFIROS_QEMU_TEST
-    mov al, 'E'
-    out 0xE9, al
-%endif
-    cli
-    mov rdi, VGA_BASE + (80 * 8)
-    mov rsi, KERNEL_BASE + msg_fault
-    call vga_print
-.halt:
-    hlt
-    jmp .halt
-
-
 align 8
 
 gdt_start:
