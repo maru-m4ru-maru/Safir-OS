@@ -343,19 +343,22 @@ timer_interrupt:
     push r15
 
     mov rdi, rsp
+    mov r12, rsp
     mov rax, [PREEMPT_HOOK_SLOT]
     test rax, rax
     jz .no_hook
-    call rax
 
-    mov r12, rax
-    mov al, 0x20
-    out 0x20, al
+    and rsp, -16
+    call rax
+    mov r13, rax
     mov rsp, r12
-    jmp .restore
+    mov r12, r13
+    jmp .eoi
 
 .no_hook:
     mov r12, rsp
+
+.eoi:
     mov al, 0x20
     out 0x20, al
     mov rsp, r12
