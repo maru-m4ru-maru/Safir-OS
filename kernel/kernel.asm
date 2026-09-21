@@ -15,6 +15,7 @@ org 0x0000
 %define PD_BASE         0x00092000
 %define VGA_BASE        0x000B8000
 %define PREEMPT_HOOK_SLOT 0x0005F000
+%define PREEMPT_STACK_TOP 0x0006F000
 %define PREEMPT_BOOTSTRAP_SLOT 0x0005F008
 
 %define PIT_FREQUENCY   100
@@ -387,6 +388,7 @@ timer_interrupt:
 
     mov rdi, rsp
     mov r12, rsp
+    mov r15, rsp
     mov rax, [PREEMPT_HOOK_SLOT]
     test rax, rax
     jz .no_hook
@@ -396,9 +398,10 @@ timer_interrupt:
     out 0xE9, al
 %endif
 
-    and rsp, -16
+    mov rsp, PREEMPT_STACK_TOP
     call rax
     mov r13, rax
+    mov rsp, r15
 
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'D'
