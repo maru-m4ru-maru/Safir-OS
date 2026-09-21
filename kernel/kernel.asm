@@ -268,6 +268,10 @@ long_mode_start:
 
     mov rdi, E820_BASE
     movzx rsi, word [KERNEL_BASE + e820_count]
+    xor edx, edx
+%ifdef SAFIROS_QEMU_TEST
+    mov edx, 1
+%endif
     mov rax, RUST_BASE
     call rax
 
