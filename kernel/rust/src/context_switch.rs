@@ -2,8 +2,6 @@ use core::arch::global_asm;
 
 use crate::CpuContext;
 
-const CPU_CONTEXT_SIZE: usize = 72;
-
 global_asm!(r#"
 .intel_syntax noprefix
 
@@ -64,14 +62,11 @@ safiros_context_switch_smoke_test:
     mov qword ptr [CTX_B + 24], 0x2222222222222222
     mov qword ptr [CTX_B + 32], 0xC1C1C1C1C1C1C1C1
     mov qword ptr [CTX_B + 40], 0xD1D1D1D1D1D1D1D1
-
     mov qword ptr [CTX_B + 48], TEST_STACK_B_TOP - 8
+
     lea rax, [rip + context_test_b]
     mov qword ptr [CTX_B + 56], rax
     mov qword ptr [CTX_B + 64], 0x2
-
-    lea rax, [rip + context_test_done]
-    mov qword ptr [TEST_STACK_B_TOP - 8], rax
 
     mov al, 'C'
     out 0xE9, al
@@ -99,6 +94,19 @@ safiros_context_switch_smoke_test:
     mov rdi, CTX_A
     mov rsi, CTX_B
     call safiros_context_switch
+
+    cmp r15, 0x1515151515151515
+    jne context_test_fail
+    cmp r14, 0x1414141414141414
+    jne context_test_fail
+    cmp r13, 0x1313131313131313
+    jne context_test_fail
+    cmp r12, 0x1212121212121212
+    jne context_test_fail
+    cmp rbx, 0xB1B1B1B1B1B1B1B1
+    jne context_test_fail
+    cmp rbp, 0xA1A1A1A1A1A1A1A1
+    jne context_test_fail
 
 context_test_done:
     mov al, 'W'
@@ -139,12 +147,14 @@ context_test_b:
     cmp rbx, 0xC1C1C1C1C1C1C1C1
     jne context_test_fail
     cmp rbp, 0xD1D1D1D1D1D1D1D1
-
     jne context_test_fail
 
     mov al, 'S'
     out 0xE9, al
-    jmp context_test_done
+
+    mov rdi, CTX_B
+    mov rsi, CTX_A
+    call safiros_context_switch
 
 context_test_fail:
     mov al, 'F'
@@ -159,10 +169,6 @@ context_test_fail:
 unsafe extern "C" {
     fn safiros_context_switch(old: *mut CpuContext, new: *const CpuContext);
     fn safiros_context_switch_smoke_test() -> u64;
-}
-
-pub const fn context_size() -> usize {
-    CPU_CONTEXT_SIZE
 }
 
 pub unsafe fn context_switch(old: &mut CpuContext, new: &CpuContext) {
