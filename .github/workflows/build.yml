@@ -43,6 +43,13 @@ jobs:
             --test scheduler_property \
             --manifest-path kernel/rust/Cargo.toml
 
+      - name: Property test Task
+        run: |
+          cargo test \
+            --features host-test \
+            --test task_property \
+            --manifest-path kernel/rust/Cargo.toml
+
       - name: Verify Dafny specifications
         uses: dafny-lang/setup-dafny-action@v1
         with:
@@ -60,6 +67,8 @@ jobs:
           dafny audit verification/ring_buffer.dfy
           dafny verify verification/scheduler.dfy
           dafny audit verification/scheduler.dfy
+          dafny verify verification/task.dfy
+          dafny audit verification/task.dfy
 
       - name: Differential test Dafny vs Rust bitmap
         run: |
@@ -80,6 +89,10 @@ jobs:
       - name: Differential test Dafny vs Rust scheduler
         run: |
           bash scripts/test-scheduler-differential.sh
+
+      - name: Differential test Dafny vs Rust task state
+        run: |
+          bash scripts/test-task-differential.sh
 
       - name: Build kernel
         run: |

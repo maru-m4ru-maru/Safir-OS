@@ -3,6 +3,7 @@
 pub mod memory;
 pub mod ring_buffer;
 pub mod scheduler;
+pub mod task;
 mod vga;
 
 #[cfg(not(feature = "host-test"))]
@@ -19,6 +20,7 @@ pub use memory::{
 };
 pub use ring_buffer::RingBuffer;
 pub use scheduler::Scheduler;
+pub use task::{CpuContext, Task, TaskState};
 
 #[cfg(not(feature = "host-test"))]
 #[panic_handler]
