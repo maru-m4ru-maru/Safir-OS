@@ -6,6 +6,9 @@ org 0x0000
 
 ; Low-memory scratch regions. All are below 640 KiB.
 %define EARLY_STACK     0x00070000
+%define E820_BASE       0x00006000
+%define E820_MAX_ENTRIES 32
+%define E820_ENTRY_SIZE 24
 %define IDT_BASE        0x00080000
 %define PML4_BASE       0x00090000
 %define PDPT_BASE       0x00091000
@@ -23,8 +26,38 @@ start:
     mov ds, ax
     mov es, ax
 
-    ; GDT is addressed through the current CS base (0x10000).
     lgdt [cs:gdt32_descriptor]
+
+    mov word [e820_count], 0
+    mov ax, E820_BASE >> 4
+    mov es, ax
+    xor di, di
+    xor ebx, ebx
+    xor bp, bp
+.e820_next:
+    cmp bp, E820_MAX_ENTRIES
+    jae .e820_done
+
+    mov dword [es:di + 20], 1
+    mov eax, 0x0000E820
+    mov edx, 0x534D4150
+    mov ecx, E820_ENTRY_SIZE
+    int 0x15
+    jc .e820_done
+    cmp eax, 0x534D4150
+    jne .e820_done
+    cmp ecx, 20
+    jb .e820_done
+
+    inc bp
+    add di, E820_ENTRY_SIZE
+    test ebx, ebx
+    jnz .e820_next
+
+.e820_done:
+    mov [cs:e820_count], bp
+    mov ax, 0x1000
+    mov es, ax
 
     ; Enable A20 through the Fast A20 gate.
     in al, 0x92
@@ -233,6 +266,8 @@ long_mode_start:
     out 0xE9, al
 %endif
 
+    mov rdi, E820_BASE
+    movzx rsi, word [KERNEL_BASE + e820_count]
     mov rax, RUST_BASE
     call rax
 
@@ -394,6 +429,7 @@ msg_fault     db "EXCEPTION: CPU STOPPED", 0
 hex_table     db "0123456789ABCDEF"
 
 timer_ticks   dq 0
+e820_count    dw 0
 
 %if ($ - $) > 4096
     %error "SafirOS assembly stage exceeds 4 KiB"
