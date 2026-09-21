@@ -126,11 +126,47 @@ safiros_preemptive_start:
     sti
     ret
 
+.global safiros_resume_from_interrupt
+.type safiros_resume_from_interrupt, @function
+safiros_resume_from_interrupt:
+    mov r12, rdi
+    mov al, 0x20
+    out 0x20, al
+    bt r12, 63
+    jc .Lresume_bootstrap
+
+    mov rsp, r12
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rbp
+    pop rsi
+    pop rdi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    iretq
+
+.Lresume_bootstrap:
+    btr r12, 63
+    mov rdi, r12
+    mov rax, [0x0005F008]
+    test rax, rax
+    jz default_halt
+    jmp rax
+
 "#);
 
 #[cfg(not(feature = "host-test"))]
 unsafe extern "C" {
     fn safiros_preemptive_start(frame: *mut InterruptContext) -> !;
+    fn safiros_resume_from_interrupt(frame: *mut InterruptContext) -> !;
 }
 
 #[cfg(not(feature = "host-test"))]
@@ -217,7 +253,10 @@ pub unsafe fn init_preemption(test_mode: u64) -> ! {
     runtime.trace_ticks = 0;
     runtime.initialized = true;
 
-    core::ptr::write_volatile(0x0005F000usize as *mut u64, preempt_timer_tick as *const () as usize as u64);
+    core::ptr::write_volatile(
+        0x0005F000usize as *mut u64,
+        preempt_timer_dispatch as *const () as usize as u64,
+    );
     core::ptr::write_volatile(
         0x0005F008usize as *mut u64,
         safiros_preemptive_start as *const () as usize as u64,
@@ -237,6 +276,12 @@ pub unsafe fn init_preemption(test_mode: u64) -> ! {
     }
 
     safiros_preemptive_start(frame_a as *mut InterruptContext)
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn preempt_timer_dispatch(ctx: *mut InterruptContext) -> ! {
+    let next = preempt_timer_tick(ctx);
+    safiros_resume_from_interrupt(next)
 }
 
 #[unsafe(no_mangle)]
