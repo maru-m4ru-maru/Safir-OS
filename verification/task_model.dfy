@@ -11,26 +11,26 @@ module TaskTrace {
       invariant TaskSpec.ValidState(state)
       decreases |args| - i
     {
-      var next: nat := 0;
       if args[i] == "W" {
-        next := 1;
+        var nextState, ok := TaskSpec.Transition(state, 1);
+        state := nextState;
+        print "W:", if ok then "1" else "0", ":", state, "\n";
       } else if args[i] == "R" {
-        next := 0;
+        var nextState, ok := TaskSpec.Transition(state, 0);
+        state := nextState;
+        print "R:", if ok then "1" else "0", ":", state, "\n";
       } else if args[i] == "B" {
-        next := 2;
+        var nextState, ok := TaskSpec.Transition(state, 2);
+        state := nextState;
+        print "B:", if ok then "1" else "0", ":", state, "\n";
       } else if args[i] == "F" {
-        next := 3;
+        var nextState, ok := TaskSpec.Transition(state, 3);
+        state := nextState;
+        print "F:", if ok then "1" else "0", ":", state, "\n";
       } else {
-        print "UNKNOWN
-";
-        i := i + 1;
-        continue;
+        print "UNKNOWN\n";
       }
 
-      var result, ok := TaskSpec.Transition(state, next);
-      state := result;
-      print args[i], ":", if ok then "1" else "0", ":", state, "
-";
       i := i + 1;
     }
   }
