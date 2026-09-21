@@ -37,6 +37,8 @@ jobs:
           dafny audit verification/bitmap.dfy
           dafny verify verification/frame_allocator.dfy
           dafny audit verification/frame_allocator.dfy
+          dafny verify verification/pmm.dfy
+          dafny audit verification/pmm.dfy
 
       - name: Differential test Dafny vs Rust bitmap
         run: |
@@ -45,6 +47,10 @@ jobs:
       - name: Differential test Dafny vs Rust frame allocator
         run: |
           bash scripts/test-frame-differential.sh
+
+      - name: Differential test Dafny vs Rust physical memory manager
+        run: |
+          bash scripts/test-pmm-differential.sh
 
       - name: Build kernel
         run: |
