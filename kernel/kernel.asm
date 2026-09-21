@@ -484,6 +484,18 @@ fault_gp:
     call debugcon_hex64
     mov al, ':'
     out 0xE9, al
+    mov rax, [rsp + 8]
+    call debugcon_hex64
+    mov al, ':'
+    out 0xE9, al
+    mov rax, [rsp + 16]
+    call debugcon_hex64
+    mov al, ':'
+    out 0xE9, al
+    mov rax, [rsp + 24]
+    call debugcon_hex64
+    mov al, ':'
+    out 0xE9, al
     mov rax, [0x0005F800]
     call debugcon_hex64
     mov al, ':'
