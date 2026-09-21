@@ -27,12 +27,21 @@ impl TaskState {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CpuContext {
-    pub r15: u64,
-    pub r14: u64,
-    pub r13: u64,
-    pub r12: u64,
+    pub rax: u64,
     pub rbx: u64,
+    pub rcx: u64,
+    pub rdx: u64,
+    pub rsi: u64,
+    pub rdi: u64,
     pub rbp: u64,
+    pub r8: u64,
+    pub r9: u64,
+    pub r10: u64,
+    pub r11: u64,
+    pub r12: u64,
+    pub r13: u64,
+    pub r14: u64,
+    pub r15: u64,
     pub rsp: u64,
     pub rip: u64,
     pub rflags: u64,
@@ -41,12 +50,21 @@ pub struct CpuContext {
 impl CpuContext {
     pub const fn new(rsp: u64, rip: u64) -> Self {
         Self {
-            r15: 0,
-            r14: 0,
-            r13: 0,
-            r12: 0,
+            rax: 0,
             rbx: 0,
+            rcx: 0,
+            rdx: 0,
+            rsi: 0,
+            rdi: 0,
             rbp: 0,
+            r8: 0,
+            r9: 0,
+            r10: 0,
+            r11: 0,
+            r12: 0,
+            r13: 0,
+            r14: 0,
+            r15: 0,
             rsp,
             rip,
             rflags: 0x202,
@@ -123,17 +141,26 @@ mod tests {
 
     #[test]
     fn cpu_context_layout_matches_assembly_abi() {
-        assert_eq!(core::mem::size_of::<CpuContext>(), 72);
+        assert_eq!(core::mem::size_of::<CpuContext>(), 144);
         assert_eq!(core::mem::align_of::<CpuContext>(), 8);
-        assert_eq!(core::mem::offset_of!(CpuContext, r15), 0);
-        assert_eq!(core::mem::offset_of!(CpuContext, r14), 8);
-        assert_eq!(core::mem::offset_of!(CpuContext, r13), 16);
-        assert_eq!(core::mem::offset_of!(CpuContext, r12), 24);
-        assert_eq!(core::mem::offset_of!(CpuContext, rbx), 32);
-        assert_eq!(core::mem::offset_of!(CpuContext, rbp), 40);
-        assert_eq!(core::mem::offset_of!(CpuContext, rsp), 48);
-        assert_eq!(core::mem::offset_of!(CpuContext, rip), 56);
-        assert_eq!(core::mem::offset_of!(CpuContext, rflags), 64);
+        assert_eq!(core::mem::offset_of!(CpuContext, rax), 0);
+        assert_eq!(core::mem::offset_of!(CpuContext, rbx), 8);
+        assert_eq!(core::mem::offset_of!(CpuContext, rcx), 16);
+        assert_eq!(core::mem::offset_of!(CpuContext, rdx), 24);
+        assert_eq!(core::mem::offset_of!(CpuContext, rsi), 32);
+        assert_eq!(core::mem::offset_of!(CpuContext, rdi), 40);
+        assert_eq!(core::mem::offset_of!(CpuContext, rbp), 48);
+        assert_eq!(core::mem::offset_of!(CpuContext, r8), 56);
+        assert_eq!(core::mem::offset_of!(CpuContext, r9), 64);
+        assert_eq!(core::mem::offset_of!(CpuContext, r10), 72);
+        assert_eq!(core::mem::offset_of!(CpuContext, r11), 80);
+        assert_eq!(core::mem::offset_of!(CpuContext, r12), 88);
+        assert_eq!(core::mem::offset_of!(CpuContext, r13), 96);
+        assert_eq!(core::mem::offset_of!(CpuContext, r14), 104);
+        assert_eq!(core::mem::offset_of!(CpuContext, r15), 112);
+        assert_eq!(core::mem::offset_of!(CpuContext, rsp), 120);
+        assert_eq!(core::mem::offset_of!(CpuContext, rip), 128);
+        assert_eq!(core::mem::offset_of!(CpuContext, rflags), 136);
     }
 
     #[test]
