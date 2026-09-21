@@ -451,6 +451,12 @@ fault_ud:
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'U'
     out 0xE9, al
+    mov rax, [rsp]
+    call debugcon_hex64
+    mov al, ':'
+    out 0xE9, al
+    mov rax, [PREEMPT_HOOK_SLOT]
+    call debugcon_hex64
 %endif
     jmp default_halt
 
