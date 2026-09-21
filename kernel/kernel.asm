@@ -387,8 +387,6 @@ timer_interrupt:
 %endif
 
     mov rdi, rsp
-    mov r12, rsp
-    mov r15, rsp
     mov rax, [PREEMPT_HOOK_SLOT]
     test rax, rax
     jz .no_hook
@@ -399,36 +397,14 @@ timer_interrupt:
 %endif
 
     mov rsp, PREEMPT_STACK_TOP
-    sub rsp, 8
-    lea r13, [rel .preempt_callback_return]
-    mov [rsp], r13
     jmp rax
-
-.preempt_callback_return:
-    mov r13, rax
-    mov rsp, r15
-
-%ifdef SAFIROS_QEMU_TEST
-    mov al, 'D'
-    out 0xE9, al
-%endif
-    mov rsp, r12
-    mov r12, r13
-    jmp .eoi
 
 .no_hook:
     mov r12, rsp
-
-.eoi:
     mov al, 0x20
     out 0x20, al
-
-    bt r12, 63
-    jc .bootstrap
-
     mov rsp, r12
 
-.restore:
     pop r15
     pop r14
     pop r13
@@ -445,14 +421,6 @@ timer_interrupt:
     pop rbx
     pop rax
     iretq
-
-.bootstrap:
-    btr r12, 63
-    mov rdi, r12
-    mov rax, [PREEMPT_BOOTSTRAP_SLOT]
-    test rax, rax
-    jz default_halt
-    jmp rax
 
 
 fault_ud:
