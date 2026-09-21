@@ -59,9 +59,6 @@ safiros_context_switch:
 .type safiros_start_first_task, @function
 safiros_start_first_task:
     mov r10, rdi
-    mov rax, qword ptr [r10 + 136]
-    push rax
-    popfq
     mov r15, qword ptr [r10 + 112]
     mov r14, qword ptr [r10 + 104]
     mov r13, qword ptr [r10 + 96]
@@ -90,9 +87,6 @@ safiros_start_first_task:
 .type safiros_restore_context, @function
 safiros_restore_context:
     mov r10, rdi
-    mov rax, qword ptr [r10 + 136]
-    push rax
-    popfq
     mov r15, qword ptr [r10 + 112]
     mov r14, qword ptr [r10 + 104]
     mov r13, qword ptr [r10 + 96]
