@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(feature = "host-test"), no_std)]
 
 pub mod memory;
 mod vga;
@@ -24,7 +24,6 @@ pub extern "C" fn rust_main() {
 
     let mut writer = vga::Writer::new();
     writer.clear();
-    writer.write_bytes(b"SafirOS Rust Kernel
-");
+    writer.write_bytes(b"SafirOS Rust Kernel\n");
     writer.write_bytes(b"Kernel Core: OK");
 }
