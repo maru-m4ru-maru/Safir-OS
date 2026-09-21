@@ -146,12 +146,13 @@ context_test_done:
     ret
 
 context_test_b:
-    mov rax, rsp
-    cmp rax, TEST_STACK_B_TOP - 8
-    jne context_test_fail
     pushfq
     pop rax
     cmp rax, 0x2
+    jne context_test_fail
+
+    mov rax, rsp
+    cmp rax, TEST_STACK_B_TOP - 8
     jne context_test_fail
 
     mov rax, 0x2525252525252525
