@@ -8,6 +8,7 @@ module BitmapTrace {
     var i := 1;
 
     while i < |args|
+      invariant ValidState(usedSet)
       decreases |args| - i
     {
       if args[i] == "S0" {
