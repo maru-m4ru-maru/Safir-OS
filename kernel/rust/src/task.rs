@@ -105,6 +105,10 @@ impl Task {
         self.context
     }
 
+    pub const fn context_ptr(&self) -> *const CpuContext {
+        &self.context as *const CpuContext
+    }
+
     pub fn transition(&mut self, next: TaskState) -> bool {
         if !self.state.can_transition_to(next) {
             return false;
