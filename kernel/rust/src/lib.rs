@@ -2,6 +2,7 @@
 
 pub mod memory;
 pub mod ring_buffer;
+pub mod scheduler;
 mod vga;
 
 #[cfg(not(feature = "host-test"))]
@@ -17,6 +18,7 @@ pub use memory::{
     PhysFrame,
 };
 pub use ring_buffer::RingBuffer;
+pub use scheduler::Scheduler;
 
 #[cfg(not(feature = "host-test"))]
 #[panic_handler]
