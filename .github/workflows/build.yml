@@ -148,4 +148,4 @@ jobs:
 
           test "$rc" -eq 33
           test -f build/debugcon.log
-          grep -q "PICHSJRTBABABABAQ" build/debugcon.log
+          test "$(tr -d "\n" < build/debugcon.log)" = "PICHSJRTBABABABAQ"
