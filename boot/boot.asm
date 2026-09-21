@@ -2,7 +2,7 @@ bits 16
 org 0x0000
 
 %define KERNEL_LOAD_SEGMENT 0x1000
-%define KERNEL_SECTORS 16
+%define KERNEL_SECTORS 32
 
 start:
     cli
@@ -18,18 +18,36 @@ start:
     mov ax, KERNEL_LOAD_SEGMENT
     mov es, ax
     xor bx, bx
+    mov si, KERNEL_SECTORS
+    mov byte [current_sector], 2
+    mov byte [current_head], 0
 
-    ; Read sectors 2..17 of the first floppy track.
+.read_kernel:
     mov ah, 0x02
-    mov al, KERNEL_SECTORS
-    mov ch, 0x00
-    mov cl, 0x02
-    mov dh, 0x00
+    mov al, 0x01
+    xor ch, ch
+    mov cl, [current_sector]
+    mov dh, [current_head]
     mov dl, [boot_drive]
     int 0x13
     jc disk_error
 
-    ; 0x1000:0000 = physical 0x00010000.
+    add bx, 512
+    dec si
+    jz kernel_loaded
+
+    inc byte [current_sector]
+    cmp byte [current_sector], 19
+    jb .read_kernel
+
+    mov byte [current_sector], 1
+    inc byte [current_head]
+    cmp byte [current_head], 2
+    jb .read_kernel
+
+    jmp disk_error
+
+kernel_loaded:
     jmp KERNEL_LOAD_SEGMENT:0x0000
 
 disk_error:
@@ -52,6 +70,8 @@ disk_error:
     jmp .halt
 
 boot_drive db 0
+current_sector db 0
+current_head db 0
 error_message db "SafirOS: Kernel load failed.", 13, 10, 0
 
 times 510 - ($ - $$) db 0
