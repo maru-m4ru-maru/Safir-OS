@@ -76,6 +76,10 @@ impl<const N: usize> MemoryMap<N> {
     }
 
     pub unsafe fn from_raw(ptr: *const E820Entry, len: usize) -> Self {
+        let len = len.min(N);
+        if len == 0 {
+            return Self::new();
+        }
         let entries = core::slice::from_raw_parts(ptr, len);
         Self::from_entries(entries)
     }
