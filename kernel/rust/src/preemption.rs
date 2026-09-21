@@ -116,48 +116,20 @@ safiros_preemptive_start:
     pop rax
 
     mov r10, rsp
-    lea r11, [rip + safiros_hex]
+    mov r11, 0x0005F800
+
+    mov rax, [r10]
+    mov [r11 + 0], rax
+    mov rax, [r10 + 8]
+    mov [r11 + 8], rax
+    mov rax, [r10 + 16]
+    mov [r11 + 16], rax
+
     mov al, 'I'
     out 0xE9, al
 
-    mov rax, [r10]
-    mov rdx, rax
-    mov rcx, 8
-.iretd_rip:
-    mov rax, rdx
-    shr rax, 60
-    mov al, [r11 + rax]
-    out 0xE9, al
-    shl rdx, 4
-    loop .iretd_rip
-
-    mov rax, [r10 + 8]
-    mov rdx, rax
-    mov rcx, 4
-.iretd_cs:
-    mov rax, rdx
-    shr rax, 12
-    mov al, [r11 + rax]
-    out 0xE9, al
-    shl rdx, 4
-    loop .iretd_cs
-
-    mov rax, [r10 + 16]
-    mov rdx, rax
-    mov rcx, 8
-.iretd_flags:
-    mov rax, rdx
-    shr rax, 60
-    mov al, [r11 + rax]
-    out 0xE9, al
-    shl rdx, 4
-    loop .iretd_flags
-
     mov rsp, r10
     iretq
-
-safiros_hex:
-    .ascii "0123456789ABCDEF"
 
 "#);
 
