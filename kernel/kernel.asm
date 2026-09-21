@@ -396,7 +396,7 @@ timer_interrupt:
     out 0xE9, al
 %endif
 
-    mov rsp, PREEMPT_STACK_TOP
+    lea rsp, [PREEMPT_STACK_TOP - 8]
     jmp rax
 
 .no_hook:
