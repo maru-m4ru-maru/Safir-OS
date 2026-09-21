@@ -119,7 +119,9 @@ jobs:
           echo "Symbols near preemption"
           nm -n build/rust.elf | awk '$1 >= "0000000000011D00" && $1 <= "0000000000012000" {print}'
           echo "Disassembly around failing address"
-          objdump -d --start-address=0x11e20 --stop-address=0x11e70 build/rust.elf
+          objdump -d --start-address=0x11e20 --stop-address=0x11f40 build/rust.elf
+          echo "Preemption source symbols"
+          nm -n build/rust.elf | awk '$1 >= "0000000000011E20" && $1 <= "0000000000011F40" {print}'
 
       - name: Validate binaries
         run: |
