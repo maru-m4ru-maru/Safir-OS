@@ -392,9 +392,12 @@ timer_interrupt:
     jz .no_hook
 
 %ifdef SAFIROS_QEMU_TEST
+    mov r11, rax
     mov al, 'C'
     out 0xE9, al
+    mov rax, r11
     call debugcon_hex64
+    mov rax, r11
 %endif
 
     lea rsp, [PREEMPT_STACK_TOP - 8]
