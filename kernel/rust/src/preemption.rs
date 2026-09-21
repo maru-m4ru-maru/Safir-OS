@@ -1,3 +1,5 @@
+use core::arch::{asm, global_asm};
+
 use crate::{CpuContext, Scheduler, Task, TaskState};
 
 #[repr(C)]
@@ -57,8 +59,8 @@ impl InterruptContext {
 
 const TASK_A_ID: u64 = 1;
 const TASK_B_ID: u64 = 2;
-const TASK_A_STACK_TOP: usize = 0x00064000;
-const TASK_B_STACK_TOP: usize = 0x00068000;
+const TASK_A_STACK_TOP: usize = 0x00063FF8;
+const TASK_B_STACK_TOP: usize = 0x00067FF8;
 const TRACE_TICKS: u64 = 8;
 
 #[repr(C)]
@@ -76,8 +78,8 @@ impl RuntimeState {
         Self {
             scheduler: Scheduler::new(),
             tasks: [
-                Task::new(1, CpuContext::new(TASK_A_STACK_TOP as u64, 1)),
-                Task::new(2, CpuContext::new(TASK_B_STACK_TOP as u64, 1)),
+                Task::new(1, CpuContext::new(TASK_A_STACK_TOP as u64, preempt_task_a as usize as u64)),
+                Task::new(2, CpuContext::new(TASK_B_STACK_TOP as u64, preempt_task_b as usize as u64)),
             ],
             frames: [0, 0],
             trace_enabled: false,
@@ -91,11 +93,36 @@ impl RuntimeState {
 static mut RUNTIME: RuntimeState = RuntimeState::new();
 
 #[cfg(not(feature = "host-test"))]
+global_asm!(r#"
+.intel_syntax noprefix
+
+.global safiros_preemptive_start
+.type safiros_preemptive_start, @function
+safiros_preemptive_start:
+    mov rsp, rdi
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rbp
+    pop rdi
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    iretq
+
+.att_syntax
+"#);
+
+#[cfg(not(feature = "host-test"))]
 unsafe extern "C" {
-    static mut rust_timer_hook: u64;
-    fn preemptive_start(frame: *mut InterruptContext) -> !;
-    fn preempt_task_a() -> !;
-    fn preempt_task_b() -> !;
+    fn safiros_preemptive_start(frame: *mut InterruptContext) -> !;
 }
 
 #[cfg(not(feature = "host-test"))]
@@ -134,6 +161,24 @@ unsafe fn task_frame(stack_top: usize, rip: usize) -> usize {
     frame
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn preempt_task_a() -> ! {
+    loop {
+        unsafe {
+            asm!("hlt", options(nomem, nostack, preserves_flags));
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn preempt_task_b() -> ! {
+    loop {
+        unsafe {
+            asm!("hlt", options(nomem, nostack, preserves_flags));
+        }
+    }
+}
+
 #[cfg(not(feature = "host-test"))]
 pub unsafe fn init_preemption(test_mode: u64) -> ! {
     let runtime = &mut *core::ptr::addr_of_mut!(RUNTIME);
@@ -163,13 +208,13 @@ pub unsafe fn init_preemption(test_mode: u64) -> ! {
     runtime.trace_ticks = 0;
     runtime.initialized = true;
 
-    rust_timer_hook = preempt_timer_tick as usize as u64;
+    core::ptr::write_volatile(0x0005F000usize as *mut u64, preempt_timer_tick as usize as u64);
 
     if runtime.trace_enabled {
         debugcon(b'R');
     }
 
-    preemptive_start(frame_a)
+    safiros_preemptive_start(frame_a)
 }
 
 #[unsafe(no_mangle)]
