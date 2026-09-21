@@ -495,6 +495,24 @@ fault_pf:
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'P'
     out 0xE9, al
+
+    mov rax, [rsp]
+    call debugcon_hex64
+    mov al, ':'
+    out 0xE9, al
+
+    mov rax, [rsp + 8]
+    call debugcon_hex64
+    mov al, ':'
+    out 0xE9, al
+
+    mov rax, [rsp + 16]
+    call debugcon_hex64
+    mov al, ':'
+    out 0xE9, al
+
+    mov rax, cr2
+    call debugcon_hex64
 %endif
     jmp default_halt
 
