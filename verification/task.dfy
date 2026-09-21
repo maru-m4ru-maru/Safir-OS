@@ -9,7 +9,7 @@ predicate ValidContext(rsp: nat, rip: nat, rflags: nat)
 {
   rsp != 0 &&
   rip != 0 &&
-  (rflags & 2) == 2
+  rflags % 4 >= 2
 }
 
 predicate CanTransition(current: nat, next: nat)
