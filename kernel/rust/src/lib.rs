@@ -2,6 +2,7 @@
 
 pub mod context_switch;
 pub mod memory;
+pub mod preemption;
 pub mod ring_buffer;
 pub mod scheduler;
 pub mod task;
@@ -34,7 +35,7 @@ fn panic(_info: &PanicInfo) -> ! {
 
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".text.rust_main")]
-pub extern "C" fn rust_main(e820_ptr: u64, e820_len: usize, test_mode: u64) {
+pub extern "C" fn rust_main(e820_ptr: u64, e820_len: usize, test_mode: u64) -> ! {
     let memory_map = unsafe {
         MemoryMap::<32>::from_raw(e820_ptr as *const E820Entry, e820_len)
     };
@@ -42,7 +43,7 @@ pub extern "C" fn rust_main(e820_ptr: u64, e820_len: usize, test_mode: u64) {
     let mut physical_memory = PhysicalMemoryManager::<4096>::from_memory_map(&memory_map);
 
     physical_memory.reserve_range(0x00006000, 32 * 24);
-    physical_memory.reserve_range(0x00010000, 8192);
+    physical_memory.reserve_range(0x00010000, 0x4000);
     physical_memory.reserve_range(0x00068000, 0x4000);
     physical_memory.reserve_range(0x00080000, 0x1000);
     physical_memory.reserve_range(0x00090000, 0x3000);
@@ -50,17 +51,13 @@ pub extern "C" fn rust_main(e820_ptr: u64, e820_len: usize, test_mode: u64) {
 
     let mut writer = vga::Writer::new();
     writer.clear();
-    writer.write_bytes(b"SafirOS Rust Kernel
-");
-    writer.write_bytes(b"Kernel Core: OK
-");
+    writer.write_bytes(b"SafirOS Rust Kernel\n");
+    writer.write_bytes(b"Kernel Core: OK\n");
 
     if memory_map.is_empty() {
-        writer.write_bytes(b"Memory Map: EMPTY
-");
+        writer.write_bytes(b"Memory Map: EMPTY\n");
     } else {
-        writer.write_bytes(b"Memory Map: OK
-");
+        writer.write_bytes(b"Memory Map: OK\n");
     }
 
     if physical_memory.free_frames() > 0 {
@@ -69,12 +66,8 @@ pub extern "C" fn rust_main(e820_ptr: u64, e820_len: usize, test_mode: u64) {
         writer.write_bytes(b"Physical Memory: EMPTY");
     }
 
-    if test_mode != 0 {
-        let ok = unsafe { context_switch::qemu_smoke_test() };
-        if !ok {
-            loop {
-                core::hint::spin_loop();
-            }
-        }
+    let first_context = unsafe { preemption::initialize(test_mode) };
+    unsafe {
+        preemption::start_first_task(first_context);
     }
 }
