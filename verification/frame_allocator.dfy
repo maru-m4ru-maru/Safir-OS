@@ -15,15 +15,25 @@ method AllocateFirst(usedSet: set<nat>)
   ensures ok ==> forall j: nat :: j < index ==> j in usedSet
   ensures !ok ==> newSet == usedSet
 {
+  if |usedSet| == 64 {
+    newSet := usedSet;
+    index := 0;
+    ok := false;
+    return;
+  }
+
   var i: nat := 0;
 
   while i < 64
     invariant i <= 64
     invariant ValidState(usedSet)
+    invariant |usedSet| < 64
     invariant forall j: nat :: j < i ==> j in usedSet
     decreases 64 - i
   {
     if i !in usedSet {
+      assert i < 64;
+      assert |usedSet + {i}| == |usedSet| + 1;
       newSet := usedSet + {i};
       index := i;
       ok := true;
