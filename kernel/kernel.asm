@@ -15,6 +15,7 @@ org 0x0000
 %define PD_BASE         0x00092000
 %define VGA_BASE        0x000B8000
 %define PREEMPT_HOOK_SLOT 0x0005F000
+%define PREEMPT_BOOTSTRAP_SLOT 0x0005F008
 
 %define PIT_FREQUENCY   100
 %define PIT_DIVISOR     11931
@@ -413,6 +414,10 @@ timer_interrupt:
 .eoi:
     mov al, 0x20
     out 0x20, al
+
+    bt r12, 63
+    jc .bootstrap
+
     mov rsp, r12
 
 .restore:
@@ -432,6 +437,14 @@ timer_interrupt:
     pop rbx
     pop rax
     iretq
+
+.bootstrap:
+    btr r12, 63
+    mov rdi, r12
+    mov rax, [PREEMPT_BOOTSTRAP_SLOT]
+    test rax, rax
+    jz default_halt
+    jmp rax
 
 
 fault_ud:
