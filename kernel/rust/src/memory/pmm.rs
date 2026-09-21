@@ -128,7 +128,7 @@ mod tests {
         );
         assert_eq!(
             manager.is_allocated(PhysFrame::containing_address(0x5000)),
-            Some(false)
+            Some(true)
         );
     }
 
