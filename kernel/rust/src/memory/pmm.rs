@@ -2,18 +2,21 @@ use super::{Bitmap, MemoryMap, PhysFrame, PAGE_SIZE};
 
 pub struct PhysicalMemoryManager<const WORDS: usize> {
     bitmap: Bitmap<WORDS>,
+    reserved: Bitmap<WORDS>,
 }
 
 impl<const WORDS: usize> PhysicalMemoryManager<WORDS> {
     pub fn from_memory_map<const N: usize>(map: &MemoryMap<N>) -> Self {
         let mut manager = Self {
             bitmap: Bitmap::new(),
+            reserved: Bitmap::new(),
         };
 
         let capacity = manager.capacity();
         for index in 0..capacity {
             if !map.frame_is_usable(index as u64) {
                 let _ = manager.bitmap.allocate_specific(index);
+                let _ = manager.reserved.allocate_specific(index);
             }
         }
 
@@ -41,7 +44,13 @@ impl<const WORDS: usize> PhysicalMemoryManager<WORDS> {
     pub fn deallocate(&mut self, frame: PhysFrame) -> bool {
         let index = usize::try_from(frame.number()).ok();
         match index {
-            Some(index) if index < self.capacity() => self.bitmap.free_index(index),
+            Some(index) if index < self.capacity() => {
+                if self.reserved.is_allocated(index) == Some(true) {
+                    false
+                } else {
+                    self.bitmap.free_index(index)
+                }
+            }
             _ => false,
         }
     }
@@ -65,6 +74,7 @@ impl<const WORDS: usize> PhysicalMemoryManager<WORDS> {
         for index in start..finish {
             if let Ok(index) = usize::try_from(index) {
                 let _ = self.bitmap.allocate_specific(index);
+                let _ = self.reserved.allocate_specific(index);
             }
         }
     }
@@ -130,6 +140,31 @@ mod tests {
             manager.is_allocated(PhysFrame::containing_address(0x5000)),
             Some(true)
         );
+        assert_eq!(
+            manager.is_allocated(PhysFrame::containing_address(0x2000)),
+            Some(false)
+        );
+    }
+
+    #[test]
+    fn reserved_frames_cannot_be_deallocated() {
+        let entries = [E820Entry {
+            base: 0,
+            length: 0x10000,
+            kind: 1,
+            attrs: 1,
+        }];
+
+        let map = MemoryMap::<2>::from_entries(&entries);
+        let mut manager = PhysicalMemoryManager::<1>::from_memory_map(&map);
+
+        manager.reserve_range(0x3000, 0x1000);
+        assert!(!manager.deallocate(PhysFrame::containing_address(0x3000)));
+        assert_eq!(
+            manager.is_allocated(PhysFrame::containing_address(0x3000)),
+            Some(true)
+        );
+        assert_eq!(manager.free_frames(), 15);
     }
 
     #[test]
