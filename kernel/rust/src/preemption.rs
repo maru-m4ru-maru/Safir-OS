@@ -64,6 +64,7 @@ const TASK_A_ID: u64 = 1;
 const TASK_B_ID: u64 = 2;
 const TASK_A_STACK_TOP: usize = 0x00063FE8;
 const TASK_B_STACK_TOP: usize = 0x00067FE8;
+#[cfg(not(feature = "host-test"))]
 const TASK_STACK_SS: u64 = 0x20;
 #[cfg(not(feature = "host-test"))]
 const TRACE_TICKS: u64 = 8;
