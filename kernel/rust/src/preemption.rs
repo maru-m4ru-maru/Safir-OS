@@ -286,7 +286,7 @@ pub unsafe extern "C" fn preempt_timer_tick(ctx: *mut InterruptContext) -> *mut 
         }
     }
 
-    let next_frame = runtime.frames[next];
+    let mut next_frame = runtime.frames[next];
     if next_frame == 0 || (next_frame & 7) != 0 {
         return ctx;
     }
