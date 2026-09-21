@@ -44,7 +44,7 @@ pub extern "C" fn rust_main(e820_ptr: u64, e820_len: usize, test_mode: u64) {
     let mut physical_memory = PhysicalMemoryManager::<4096>::from_memory_map(&memory_map);
 
     physical_memory.reserve_range(0x00006000, 32 * 24);
-    physical_memory.reserve_range(0x00010000, 8192);
+    physical_memory.reserve_range(0x00010000, 0x4000);
     physical_memory.reserve_range(0x0005F000, 0x1000);
     physical_memory.reserve_range(0x00060000, 0x8000);
     physical_memory.reserve_range(0x00068000, 0x4000);
