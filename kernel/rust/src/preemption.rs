@@ -284,6 +284,7 @@ pub unsafe fn init_preemption(test_mode: u64) -> ! {
     safiros_preemptive_start(frame_a as *mut InterruptContext)
 }
 
+#[cfg(not(feature = "host-test"))]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn preempt_timer_dispatch(ctx: *mut InterruptContext) -> ! {
     let next = preempt_timer_tick(ctx);
