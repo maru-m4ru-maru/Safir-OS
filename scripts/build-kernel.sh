@@ -16,7 +16,7 @@ nm -n build/rust.elf | awk '$3=="rust_main" {print $1}' | grep -qx '000000000001
 objcopy -O binary build/rust.elf build/rust.bin
 
 test "$(stat -c%s build/rust.bin)" -gt 0
-test "$(stat -c%s build/rust.bin)" -le 4096
+test "$(stat -c%s build/rust.bin)" -le 12288
 
 build_kernel() {
     local define="$1"
@@ -30,10 +30,10 @@ build_kernel() {
 
     test "$(stat -c%s build/kernel-stage.bin)" -le 4096
 
-    dd if=/dev/zero of="$output" bs=512 count=16 status=none
+    dd if=/dev/zero of="$output" bs=512 count=32 status=none
     dd if=build/kernel-stage.bin of="$output" bs=1 seek=0 conv=notrunc status=none
     dd if=build/rust.bin of="$output" bs=1 seek=$((0x1000)) conv=notrunc status=none
-    test "$(stat -c%s "$output")" -eq 8192
+    test "$(stat -c%s "$output")" -eq 16384
 }
 
 build_kernel "" build/kernel.bin
