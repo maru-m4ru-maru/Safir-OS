@@ -141,5 +141,4 @@ jobs:
 
           test "$rc" -eq 33
           test -f build/debugcon.log
-          grep -q "PICHSJRT" build/debugcon.log
-          grep -q "CTXSW" build/debugcon.log
+          grep -q "PICHSJCTXSWRT" build/debugcon.log
