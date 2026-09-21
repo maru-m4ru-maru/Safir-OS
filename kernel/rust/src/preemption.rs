@@ -62,8 +62,9 @@ impl InterruptContext {
 
 const TASK_A_ID: u64 = 1;
 const TASK_B_ID: u64 = 2;
-const TASK_A_STACK_TOP: usize = 0x00063FF8;
-const TASK_B_STACK_TOP: usize = 0x00067FF8;
+const TASK_A_STACK_TOP: usize = 0x00063FE8;
+const TASK_B_STACK_TOP: usize = 0x00067FE8;
+const TASK_STACK_SS: u64 = 0x20;
 #[cfg(not(feature = "host-test"))]
 const TRACE_TICKS: u64 = 8;
 
@@ -174,6 +175,14 @@ unsafe fn task_frame(stack_top: usize, rip: usize) -> usize {
     core::ptr::write(
         frame as *mut InterruptContext,
         InterruptContext::new(rip as u64, 0x18, 0x202),
+    );
+    core::ptr::write(
+        (frame + core::mem::size_of::<InterruptContext>()) as *mut u64,
+        stack_top as u64,
+    );
+    core::ptr::write(
+        (frame + core::mem::size_of::<InterruptContext>() + 8) as *mut u64,
+        TASK_STACK_SS,
     );
     frame
 }
