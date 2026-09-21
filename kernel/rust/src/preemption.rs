@@ -158,8 +158,14 @@ safiros_resume_from_interrupt:
     mov rdi, r12
     mov rax, [0x0005F008]
     test rax, rax
-    jz default_halt
+    jz .Lresume_halt
     jmp rax
+
+.Lresume_halt:
+    cli
+.Lresume_halt_loop:
+    hlt
+    jmp .Lresume_halt_loop
 
 "#);
 
