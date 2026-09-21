@@ -94,7 +94,6 @@ static mut RUNTIME: RuntimeState = RuntimeState::new();
 
 #[cfg(not(feature = "host-test"))]
 global_asm!(r#"
-.intel_syntax noprefix
 
 .global safiros_preemptive_start
 .type safiros_preemptive_start, @function
@@ -117,7 +116,6 @@ safiros_preemptive_start:
     pop rax
     iretq
 
-.att_syntax
 "#);
 
 #[cfg(not(feature = "host-test"))]
