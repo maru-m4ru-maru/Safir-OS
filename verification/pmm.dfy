@@ -5,28 +5,28 @@ predicate ValidSet(s: set<nat>)
   forall i: nat :: i in s ==> i < 64
 }
 
-predicate ValidState(allocated: set<nat>, reserved: set<nat>)
+predicate ValidState(usedSet: set<nat>, reserved: set<nat>)
 {
-  ValidSet(allocated) &&
+  ValidSet(usedSet) &&
   ValidSet(reserved) &&
-  forall i: nat :: i in reserved ==> i in allocated
+  forall i: nat :: i in reserved ==> i in usedSet
 }
 
-method AllocateFirst(allocated: set<nat>, reserved: set<nat>)
+method AllocateFirst(usedSet: set<nat>, reserved: set<nat>)
   returns (newAllocated: set<nat>, newReserved: set<nat>, index: nat, ok: bool)
-  requires ValidState(allocated, reserved)
+  requires ValidState(usedSet, reserved)
   ensures ValidState(newAllocated, newReserved)
   ensures ok ==> index < 64
-  ensures ok ==> index !in allocated
+  ensures ok ==> index !in usedSet
   ensures ok ==> index !in reserved
-  ensures ok ==> newAllocated == allocated + {index}
+  ensures ok ==> newAllocated == usedSet + {index}
   ensures ok ==> newReserved == reserved
-  ensures ok ==> forall j: nat :: j < index ==> j in allocated || j in reserved
-  ensures !ok ==> newAllocated == allocated
+  ensures ok ==> forall j: nat :: j < index ==> j in usedSet || j in reserved
+  ensures !ok ==> newAllocated == usedSet
   ensures !ok ==> newReserved == reserved
 {
-  if |allocated| == 64 {
-    newAllocated := allocated;
+  if |usedSet| == 64 {
+    newAllocated := usedSet;
     newReserved := reserved;
     index := 0;
     ok := false;
@@ -37,14 +37,14 @@ method AllocateFirst(allocated: set<nat>, reserved: set<nat>)
 
   while i < 64
     invariant i <= 64
-    invariant ValidState(allocated, reserved)
-    invariant |allocated| < 64
-    invariant forall j: nat :: j < i ==> j in allocated || j in reserved
+    invariant ValidState(usedSet, reserved)
+    invariant |usedSet| < 64
+    invariant forall j: nat :: j < i ==> j in usedSet || j in reserved
     decreases 64 - i
   {
-    if i !in allocated && i !in reserved {
+    if i !in usedSet && i !in reserved {
       assert i < 64;
-      newAllocated := allocated + {i};
+      newAllocated := usedSet + {i};
       newReserved := reserved;
       index := i;
       ok := true;
@@ -54,43 +54,43 @@ method AllocateFirst(allocated: set<nat>, reserved: set<nat>)
     i := i + 1;
   }
 
-  newAllocated := allocated;
+  newAllocated := usedSet;
   newReserved := reserved;
   index := 0;
   ok := false;
 }
 
-method ReserveSpecific(allocated: set<nat>, reserved: set<nat>, index: nat)
+method ReserveSpecific(usedSet: set<nat>, reserved: set<nat>, index: nat)
   returns (newAllocated: set<nat>, newReserved: set<nat>)
-  requires ValidState(allocated, reserved)
+  requires ValidState(usedSet, reserved)
   ensures ValidState(newAllocated, newReserved)
-  ensures index >= 64 ==> newAllocated == allocated
+  ensures index >= 64 ==> newAllocated == usedSet
   ensures index >= 64 ==> newReserved == reserved
-  ensures index < 64 ==> newAllocated == allocated + {index}
+  ensures index < 64 ==> newAllocated == usedSet + {index}
   ensures index < 64 ==> newReserved == reserved + {index}
 {
   if index >= 64 {
-    newAllocated := allocated;
+    newAllocated := usedSet;
     newReserved := reserved;
   } else {
-    newAllocated := allocated + {index};
+    newAllocated := usedSet + {index};
     newReserved := reserved + {index};
   }
 }
 
-method Deallocate(allocated: set<nat>, reserved: set<nat>, index: nat)
+method Deallocate(usedSet: set<nat>, reserved: set<nat>, index: nat)
   returns (newAllocated: set<nat>, ok: bool)
-  requires ValidState(allocated, reserved)
+  requires ValidState(usedSet, reserved)
   ensures ValidState(newAllocated, reserved)
-  ensures ok <==> index < 64 && index in allocated && index !in reserved
-  ensures !ok ==> newAllocated == allocated
-  ensures ok ==> newAllocated == allocated - {index}
+  ensures ok <==> index < 64 && index in usedSet && index !in reserved
+  ensures !ok ==> newAllocated == usedSet
+  ensures ok ==> newAllocated == usedSet - {index}
 {
-  if index >= 64 || index !in allocated || index in reserved {
-    newAllocated := allocated;
+  if index >= 64 || index !in usedSet || index in reserved {
+    newAllocated := usedSet;
     ok := false;
   } else {
-    newAllocated := allocated - {index};
+    newAllocated := usedSet - {index};
     ok := true;
   }
 }
