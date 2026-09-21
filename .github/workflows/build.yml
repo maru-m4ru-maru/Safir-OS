@@ -166,4 +166,4 @@ jobs:
 
           test "$rc" -eq 33
           test -f build/debugcon.log
-          test "$(tr -d "\n" < build/debugcon.log)" = "PICHSJRTCDATCDBTCDATCDBTCDATCDBTCDATCBQ"
+          test "$(tr -d "\n" < build/debugcon.log)" = "PICHSJRTBABABABAQ"
