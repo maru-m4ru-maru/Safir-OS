@@ -35,10 +35,16 @@ jobs:
         run: |
           dafny verify verification/bitmap.dfy
           dafny audit verification/bitmap.dfy
+          dafny verify verification/frame_allocator.dfy
+          dafny audit verification/frame_allocator.dfy
 
       - name: Differential test Dafny vs Rust bitmap
         run: |
           bash scripts/test-bitmap-differential.sh
+
+      - name: Differential test Dafny vs Rust frame allocator
+        run: |
+          bash scripts/test-frame-differential.sh
 
       - name: Build kernel
         run: |
