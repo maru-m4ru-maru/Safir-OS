@@ -114,10 +114,6 @@ safiros_preemptive_start:
     pop rcx
     pop rbx
     pop rax
-%ifdef SAFIROS_QEMU_TEST
-    mov al, 'I'
-    out 0xE9, al
-%endif
     iretq
 
 "#);
@@ -185,8 +181,8 @@ pub extern "C" fn preempt_task_b() -> ! {
 pub unsafe fn init_preemption(test_mode: u64) -> ! {
     let runtime = &mut *core::ptr::addr_of_mut!(RUNTIME);
 
-    let frame_a = task_frame(TASK_A_STACK_TOP, preempt_task_a as usize);
-    let frame_b = task_frame(TASK_B_STACK_TOP, preempt_task_b as usize);
+    let frame_a = task_frame(TASK_A_STACK_TOP, preempt_task_a as *const () as usize);
+    let frame_b = task_frame(TASK_B_STACK_TOP, preempt_task_b as *const () as usize);
 
     runtime.frames[0] = frame_a;
     runtime.frames[1] = frame_b;
@@ -198,11 +194,11 @@ pub unsafe fn init_preemption(test_mode: u64) -> ! {
 
     runtime.tasks[0] = Task::new(
         TASK_A_ID,
-        CpuContext::new(TASK_A_STACK_TOP as u64, preempt_task_a as usize as u64),
+        CpuContext::new(TASK_A_STACK_TOP as u64, preempt_task_a as *const () as usize as u64),
     );
     runtime.tasks[1] = Task::new(
         TASK_B_ID,
-        CpuContext::new(TASK_B_STACK_TOP as u64, preempt_task_b as usize as u64),
+        CpuContext::new(TASK_B_STACK_TOP as u64, preempt_task_b as *const () as usize as u64),
     );
     assert!(runtime.tasks[0].transition(TaskState::Running));
 
@@ -210,7 +206,7 @@ pub unsafe fn init_preemption(test_mode: u64) -> ! {
     runtime.trace_ticks = 0;
     runtime.initialized = true;
 
-    core::ptr::write_volatile(0x0005F000usize as *mut u64, preempt_timer_tick as usize as u64);
+    core::ptr::write_volatile(0x0005F000usize as *mut u64, preempt_timer_tick as *const () as usize as u64);
 
     if runtime.trace_enabled {
         debugcon(b'R');
