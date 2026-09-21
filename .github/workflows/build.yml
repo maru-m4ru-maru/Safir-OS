@@ -50,6 +50,13 @@ jobs:
             --test task_property \
             --manifest-path kernel/rust/Cargo.toml
 
+      - name: Property test Preemption
+        run: |
+          cargo test \
+            --features host-test \
+            --test preemption_property \
+            --manifest-path kernel/rust/Cargo.toml
+
       - name: Verify Dafny specifications
         uses: dafny-lang/setup-dafny-action@v1
         with:
