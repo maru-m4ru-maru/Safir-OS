@@ -122,6 +122,21 @@ mod tests {
     }
 
     #[test]
+    fn cpu_context_layout_matches_assembly_abi() {
+        assert_eq!(core::mem::size_of::<CpuContext>(), 72);
+        assert_eq!(core::mem::align_of::<CpuContext>(), 8);
+        assert_eq!(core::mem::offset_of!(CpuContext, r15), 0);
+        assert_eq!(core::mem::offset_of!(CpuContext, r14), 8);
+        assert_eq!(core::mem::offset_of!(CpuContext, r13), 16);
+        assert_eq!(core::mem::offset_of!(CpuContext, r12), 24);
+        assert_eq!(core::mem::offset_of!(CpuContext, rbx), 32);
+        assert_eq!(core::mem::offset_of!(CpuContext, rbp), 40);
+        assert_eq!(core::mem::offset_of!(CpuContext, rsp), 48);
+        assert_eq!(core::mem::offset_of!(CpuContext, rip), 56);
+        assert_eq!(core::mem::offset_of!(CpuContext, rflags), 64);
+    }
+
+    #[test]
     fn valid_context_requires_rip_rsp_and_rflags_bit() {
         assert!(CpuContext::new(1, 1).is_valid());
         assert!(!CpuContext::new(0, 1).is_valid());
