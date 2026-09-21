@@ -460,6 +460,25 @@ fault_gp:
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'G'
     out 0xE9, al
+    mov rax, [rsp]
+    mov rdx, rax
+    shr rdx, 12
+    and edx, 0xF
+    mov al, [KERNEL_BASE + hex_table + rdx]
+    out 0xE9, al
+    mov rdx, rax
+    shr rdx, 8
+    and edx, 0xF
+    mov al, [KERNEL_BASE + hex_table + rdx]
+    out 0xE9, al
+    mov rdx, rax
+    shr rdx, 4
+    and edx, 0xF
+    mov al, [KERNEL_BASE + hex_table + rdx]
+    out 0xE9, al
+    and eax, 0xF
+    mov al, [KERNEL_BASE + hex_table + rax]
+    out 0xE9, al
 %endif
     jmp default_halt
 
