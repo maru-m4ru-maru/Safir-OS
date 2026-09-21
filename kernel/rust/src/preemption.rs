@@ -62,10 +62,9 @@ impl InterruptContext {
 
 const TASK_A_ID: u64 = 1;
 const TASK_B_ID: u64 = 2;
-const TASK_A_STACK_TOP: usize = 0x00063FE8;
-const TASK_B_STACK_TOP: usize = 0x00067FE8;
-#[cfg(not(feature = "host-test"))]
-const TASK_STACK_SS: u64 = 0x20;
+const TASK_A_STACK_TOP: usize = 0x00063FF8;
+const TASK_B_STACK_TOP: usize = 0x00067FF8;
+const TASK_BOOTSTRAP_BIT: usize = 1usize << 63;
 #[cfg(not(feature = "host-test"))]
 const TRACE_TICKS: u64 = 8;
 
@@ -74,6 +73,7 @@ struct RuntimeState {
     scheduler: Scheduler<2>,
     tasks: [Task; 2],
     frames: [usize; 2],
+    started: [bool; 2],
     trace_enabled: bool,
     trace_ticks: u64,
     initialized: bool,
@@ -88,6 +88,7 @@ impl RuntimeState {
                 Task::new(2, CpuContext::new(TASK_B_STACK_TOP as u64, 1)),
             ],
             frames: [0, 0],
+            started: [false, false],
             trace_enabled: false,
             trace_ticks: 0,
             initialized: false,
@@ -104,38 +105,26 @@ global_asm!(r#"
 .global safiros_preemptive_start
 .type safiros_preemptive_start, @function
 safiros_preemptive_start:
-    mov rsp, rdi
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop r11
-    pop r10
-    pop r9
-    pop r8
-    pop rbp
-    pop rdi
-    pop rsi
-    pop rdx
-    pop rcx
-    pop rbx
-    pop rax
-
-    mov r10, rsp
-    mov r11, 0x0005F800
-
-    mov rax, [r10]
-    mov [r11 + 0], rax
-    mov rax, [r10 + 8]
-    mov [r11 + 8], rax
-    mov rax, [r10 + 16]
-    mov [r11 + 16], rax
-
-    mov al, 'I'
-    out 0xE9, al
-
-    mov rsp, r10
-    iretq
+    mov r10, rdi
+    lea rsp, [r10 + 144]
+    push qword ptr [r10 + 120]
+    mov r15, qword ptr [r10 + 0]
+    mov r14, qword ptr [r10 + 8]
+    mov r13, qword ptr [r10 + 16]
+    mov r12, qword ptr [r10 + 24]
+    mov r11, qword ptr [r10 + 32]
+    mov r9, qword ptr [r10 + 48]
+    mov r8, qword ptr [r10 + 56]
+    mov rbp, qword ptr [r10 + 64]
+    mov rdi, qword ptr [r10 + 72]
+    mov rsi, qword ptr [r10 + 80]
+    mov rdx, qword ptr [r10 + 88]
+    mov rcx, qword ptr [r10 + 96]
+    mov rbx, qword ptr [r10 + 104]
+    mov rax, qword ptr [r10 + 112]
+    mov r10, qword ptr [r10 + 40]
+    sti
+    ret
 
 "#);
 
@@ -177,14 +166,6 @@ unsafe fn task_frame(stack_top: usize, rip: usize) -> usize {
         frame as *mut InterruptContext,
         InterruptContext::new(rip as u64, 0x18, 0x202),
     );
-    core::ptr::write(
-        (frame + core::mem::size_of::<InterruptContext>()) as *mut u64,
-        stack_top as u64,
-    );
-    core::ptr::write(
-        (frame + core::mem::size_of::<InterruptContext>() + 8) as *mut u64,
-        TASK_STACK_SS,
-    );
     frame
 }
 
@@ -215,6 +196,7 @@ pub unsafe fn init_preemption(test_mode: u64) -> ! {
 
     runtime.frames[0] = frame_a;
     runtime.frames[1] = frame_b;
+    runtime.started = [true, false];
 
     runtime.scheduler = Scheduler::new();
     assert!(runtime.scheduler.enqueue(TASK_A_ID));
@@ -236,6 +218,10 @@ pub unsafe fn init_preemption(test_mode: u64) -> ! {
     runtime.initialized = true;
 
     core::ptr::write_volatile(0x0005F000usize as *mut u64, preempt_timer_tick as *const () as usize as u64);
+    core::ptr::write_volatile(
+        0x0005F008usize as *mut u64,
+        safiros_preemptive_start as *const () as usize as u64,
+    );
 
     if runtime.trace_enabled {
         debugcon(b'R');
@@ -303,6 +289,11 @@ pub unsafe extern "C" fn preempt_timer_tick(ctx: *mut InterruptContext) -> *mut 
     let next_frame = runtime.frames[next];
     if next_frame == 0 || (next_frame & 7) != 0 {
         return ctx;
+    }
+
+    if !runtime.started[next] {
+        runtime.started[next] = true;
+        next_frame |= TASK_BOOTSTRAP_BIT;
     }
 
     next_frame as *mut InterruptContext
