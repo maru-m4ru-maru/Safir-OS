@@ -46,6 +46,12 @@ safiros_context_switch:
 .global safiros_context_switch_smoke_test
 .type safiros_context_switch_smoke_test, @function
 safiros_context_switch_smoke_test:
+    push rbp
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
     pushfq
     cli
 
@@ -130,6 +136,12 @@ context_test_done:
     mov al, 'W'
     out 0xE9, al
     popfq
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    pop rbp
     mov eax, 1
     ret
 
