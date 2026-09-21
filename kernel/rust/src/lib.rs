@@ -2,6 +2,7 @@
 
 pub mod context_switch;
 pub mod memory;
+pub mod preemption;
 pub mod ring_buffer;
 pub mod scheduler;
 pub mod task;
@@ -11,6 +12,7 @@ mod vga;
 use core::panic::PanicInfo;
 
 pub use context_switch::context_switch;
+pub use preemption::InterruptContext;
 pub use memory::{
     Bitmap,
     E820Entry,
@@ -69,12 +71,13 @@ pub extern "C" fn rust_main(e820_ptr: u64, e820_len: usize, test_mode: u64) {
         writer.write_bytes(b"Physical Memory: EMPTY");
     }
 
-    if test_mode != 0 {
-        let ok = unsafe { context_switch::qemu_smoke_test() };
-        if !ok {
-            loop {
-                core::hint::spin_loop();
-            }
-        }
+    #[cfg(not(feature = "host-test"))]
+    unsafe {
+        preemption::init_preemption(test_mode);
+    }
+
+    #[cfg(feature = "host-test")]
+    {
+        let _ = test_mode;
     }
 }
