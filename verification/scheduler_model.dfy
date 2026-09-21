@@ -51,6 +51,9 @@ module SchedulerTrace {
         var nextQ, taskId, ok := SchedulerSpec.Dequeue(q);
         q := nextQ;
         print "D:", if ok then "1" else "0", ":", taskId, ":", |q|, "\n";
+      } else if args[i] == "P" {
+        var taskId, ok := SchedulerSpec.Peek(q);
+        print "P:", if ok then "1" else "0", ":", taskId, ":", |q|, "\n";
       } else if args[i] == "N" {
         var nextQ, taskId, ok := SchedulerSpec.Next(q);
         q := nextQ;
