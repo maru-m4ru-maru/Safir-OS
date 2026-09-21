@@ -469,6 +469,13 @@ fault_ss:
 %endif
     jmp default_halt
 
+fault_pf:
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'P'
+    out 0xE9, al
+%endif
+    jmp default_halt
+
 fault_gp:
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'G'
