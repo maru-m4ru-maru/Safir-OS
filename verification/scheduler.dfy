@@ -43,6 +43,22 @@ method Dequeue(q: seq<nat>)
   }
 }
 
+method Peek(q: seq<nat>)
+  returns (taskId: nat, ok: bool)
+  requires Valid(q)
+  ensures ok <==> |q| > 0
+  ensures !ok ==> taskId == 0
+  ensures ok ==> taskId == q[0]
+{
+  if |q| == 0 {
+    taskId := 0;
+    ok := false;
+  } else {
+    taskId := q[0];
+    ok := true;
+  }
+}
+
 method Next(q: seq<nat>)
   returns (newQ: seq<nat>, taskId: nat, ok: bool)
   requires Valid(q)
