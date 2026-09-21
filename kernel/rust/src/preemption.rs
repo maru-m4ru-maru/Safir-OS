@@ -123,7 +123,6 @@ safiros_preemptive_start:
     mov rbx, qword ptr [r10 + 104]
     mov rax, qword ptr [r10 + 112]
     mov r10, qword ptr [r10 + 40]
-    sti
     ret
 
 .global safiros_resume_from_interrupt
