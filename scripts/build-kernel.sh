@@ -7,6 +7,7 @@ rustup target add x86_64-unknown-none
 RUSTFLAGS='-C relocation-model=static' cargo build --manifest-path kernel/rust/Cargo.toml --release --target x86_64-unknown-none
 
 ld.lld \
+  --gc-sections \
   -T kernel/linker.ld \
   -o build/rust.elf \
   kernel/rust/target/x86_64-unknown-none/release/libsafiros_kernel.a
