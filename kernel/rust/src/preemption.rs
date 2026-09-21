@@ -1,4 +1,7 @@
-use core::arch::{asm, global_asm};
+use core::arch::asm;
+
+#[cfg(not(feature = "host-test"))]
+use core::arch::global_asm;
 
 use crate::{CpuContext, Scheduler, Task, TaskState};
 
@@ -61,6 +64,7 @@ const TASK_A_ID: u64 = 1;
 const TASK_B_ID: u64 = 2;
 const TASK_A_STACK_TOP: usize = 0x00063FF8;
 const TASK_B_STACK_TOP: usize = 0x00067FF8;
+#[cfg(not(feature = "host-test"))]
 const TRACE_TICKS: u64 = 8;
 
 #[repr(C)]
