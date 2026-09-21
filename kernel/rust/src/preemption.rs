@@ -223,6 +223,15 @@ pub unsafe fn init_preemption(test_mode: u64) -> ! {
         safiros_preemptive_start as *const () as usize as u64,
     );
 
+    unsafe {
+        asm!(
+            "out dx, al",
+            in("dx") 0x21u16,
+            in("al") 0xFEu8,
+            options(nomem, nostack, preserves_flags)
+        );
+    }
+
     if runtime.trace_enabled {
         debugcon(b'R');
     }
