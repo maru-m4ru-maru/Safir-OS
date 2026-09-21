@@ -7,10 +7,10 @@ fn differential_bitmap_trace() {
     )
     .expect("bitmap vectors");
 
-    let expected_path = std::env::var("BITMAP_EXPECTED")
-        .expect("BITMAP_EXPECTED is required for the differential test");
-    let expected = std::fs::read_to_string(expected_path)
-        .expect("Dafny expected trace");
+    let expected = std::fs::read_to_string(
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../../build/bitmap_expected.txt"),
+    )
+    .expect("Dafny expected trace");
 
     let expected: Vec<&str> = expected.lines().filter(|line| !line.is_empty()).collect();
 
