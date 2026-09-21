@@ -3,7 +3,7 @@ use safiros_kernel::Bitmap;
 #[test]
 fn differential_bitmap_trace() {
     let operations = std::fs::read_to_string(
-        concat!(env!("CARGO_MANIFEST_DIR"), "/../../../verification/bitmap_vectors.txt"),
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../../verification/bitmap_vectors.txt"),
     )
     .expect("bitmap vectors");
 
