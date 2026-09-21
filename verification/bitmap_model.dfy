@@ -8,7 +8,7 @@ module BitmapTrace {
     var i := 1;
 
     while i < |args|
-      invariant ValidState(usedSet)
+      invariant BitmapSpec.ValidState(usedSet)
       decreases |args| - i
     {
       if args[i] == "S0" {
