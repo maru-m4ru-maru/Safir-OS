@@ -116,6 +116,14 @@ context_test_done:
     ret
 
 context_test_b:
+    mov rax, rsp
+    cmp rax, TEST_STACK_B_TOP - 8
+    jne context_test_fail
+    pushfq
+    pop rax
+    cmp rax, 0x2
+    jne context_test_fail
+
     cmp r15, 0x2525252525252525
     jne context_test_fail
     cmp r14, 0x2424242424242424
@@ -159,9 +167,10 @@ context_test_b:
 context_test_fail:
     mov al, 'F'
     out 0xE9, al
-    popfq
-    xor eax, eax
-    ret
+    cli
+.halt:
+    hlt
+    jmp .halt
 
 .att_syntax
 "#);
