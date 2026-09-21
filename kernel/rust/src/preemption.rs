@@ -241,10 +241,16 @@ pub unsafe fn init_preemption(test_mode: u64) -> ! {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn preempt_timer_tick(ctx: *mut InterruptContext) -> *mut InterruptContext {
+    #[cfg(not(feature = "host-test"))]
+    debugcon(b'1');
+
     let runtime = &mut *core::ptr::addr_of_mut!(RUNTIME);
     if !runtime.initialized || ctx.is_null() {
         return ctx;
     }
+
+    #[cfg(not(feature = "host-test"))]
+    debugcon(b'2');
 
     let current_frame = ctx as usize;
     let current = if runtime.frames[0] == current_frame {
@@ -261,9 +267,15 @@ pub unsafe extern "C" fn preempt_timer_tick(ctx: *mut InterruptContext) -> *mut 
 
     runtime.frames[current] = current_frame;
 
+    #[cfg(not(feature = "host-test"))]
+    debugcon(b'3');
+
     let Some(next_id) = runtime.scheduler.next() else {
         return ctx;
     };
+
+    #[cfg(not(feature = "host-test"))]
+    debugcon(b'4');
 
     let next = if next_id == TASK_A_ID {
         0
@@ -272,6 +284,9 @@ pub unsafe extern "C" fn preempt_timer_tick(ctx: *mut InterruptContext) -> *mut 
     } else {
         return ctx;
     };
+
+    #[cfg(not(feature = "host-test"))]
+    debugcon(b'5');
 
     if next != current {
         if !runtime.tasks[current].transition(TaskState::Ready) {
@@ -286,6 +301,9 @@ pub unsafe extern "C" fn preempt_timer_tick(ctx: *mut InterruptContext) -> *mut 
     }
 
     #[cfg(not(feature = "host-test"))]
+    debugcon(b'6');
+
+    #[cfg(not(feature = "host-test"))]
     if runtime.trace_enabled {
         runtime.trace_ticks += 1;
         debugcon(if next == 0 { b'A' } else { b'B' });
@@ -295,15 +313,24 @@ pub unsafe extern "C" fn preempt_timer_tick(ctx: *mut InterruptContext) -> *mut 
         }
     }
 
+    #[cfg(not(feature = "host-test"))]
+    debugcon(b'7');
+
     let mut next_frame = runtime.frames[next];
     if next_frame == 0 || (next_frame & 7) != 0 {
         return ctx;
     }
 
+    #[cfg(not(feature = "host-test"))]
+    debugcon(b'8');
+
     if !runtime.started[next] {
         runtime.started[next] = true;
         next_frame |= TASK_BOOTSTRAP_BIT;
     }
+
+    #[cfg(not(feature = "host-test"))]
+    debugcon(b'9');
 
     next_frame as *mut InterruptContext
 }
