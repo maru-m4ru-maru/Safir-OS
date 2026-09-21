@@ -23,6 +23,17 @@ impl MemoryRegion {
     pub const fn is_usable(self) -> bool {
         self.kind == 1
     }
+
+    pub fn contains_frame(self, frame_number: u64) -> bool {
+        let Some(end) = self.end() else {
+            return false;
+        };
+        let frame_base = frame_number.saturating_mul(super::PAGE_SIZE);
+        let Some(frame_end) = frame_base.checked_add(super::PAGE_SIZE) else {
+            return false;
+        };
+        self.is_usable() && self.base <= frame_base && frame_end <= end
+    }
 }
 
 pub struct MemoryMap<const N: usize> {
@@ -104,6 +115,29 @@ impl<const N: usize> MemoryMap<N> {
 
     pub fn usable_region_count(&self) -> usize {
         self.usable_regions().count()
+    }
+
+    pub fn frame_is_usable(&self, frame_number: u64) -> bool {
+        let mut usable = false;
+
+        for region in self.regions[..self.len].iter().copied() {
+            let Some(end) = region.end() else {
+                continue;
+            };
+            let frame_base = frame_number.saturating_mul(super::PAGE_SIZE);
+            let Some(frame_end) = frame_base.checked_add(super::PAGE_SIZE) else {
+                return false;
+            };
+
+            if region.base <= frame_base && frame_end <= end {
+                if region.kind != 1 {
+                    return false;
+                }
+                usable = true;
+            }
+        }
+
+        usable
     }
 }
 
