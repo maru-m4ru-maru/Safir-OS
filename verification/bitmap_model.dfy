@@ -1,6 +1,8 @@
 include "bitmap.dfy"
 
 module BitmapTrace {
+  import BitmapSpec
+
   method Main(args: seq<string>) {
     var usedSet: set<nat> := {};
     var i := 1;
