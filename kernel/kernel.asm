@@ -480,6 +480,10 @@ fault_gp:
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'G'
     out 0xE9, al
+    mov rax, [rsp]
+    call debugcon_hex64
+    mov al, ':'
+    out 0xE9, al
     mov rax, [0x0005F800]
     call debugcon_hex64
     mov al, ':'
