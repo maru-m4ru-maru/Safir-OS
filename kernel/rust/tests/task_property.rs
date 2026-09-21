@@ -1,5 +1,27 @@
 use safiros_kernel::{CpuContext, Task, TaskState};
 
+fn task_in_state(state: TaskState) -> Task {
+    let mut task = Task::new(1, CpuContext::new(0x70000, 0x11000));
+
+    match state {
+        TaskState::Ready => {}
+        TaskState::Running => {
+            assert!(task.transition(TaskState::Running));
+        }
+        TaskState::Blocked => {
+            assert!(task.transition(TaskState::Running));
+            assert!(task.transition(TaskState::Blocked));
+        }
+        TaskState::Finished => {
+            assert!(task.transition(TaskState::Running));
+            assert!(task.transition(TaskState::Finished));
+        }
+    }
+
+    assert_eq!(task.state(), state);
+    task
+}
+
 #[test]
 fn task_state_transitions_cover_all_pairs() {
     let states = [
@@ -20,7 +42,7 @@ fn task_state_transitions_cover_all_pairs() {
                     | (TaskState::Running, TaskState::Finished)
             );
 
-            let mut task = Task::new(1, CpuContext::new(0x70000, 0x11000));
+            let mut task = task_in_state(current);
             assert_eq!(task.transition(next), expected);
             assert_eq!(
                 task.state(),
