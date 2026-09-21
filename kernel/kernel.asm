@@ -14,6 +14,7 @@ org 0x0000
 %define PDPT_BASE       0x00091000
 %define PD_BASE         0x00092000
 %define VGA_BASE        0x000B8000
+%define PREEMPT_HOOK_SLOT 0x0005F000
 
 %define PIT_FREQUENCY   100
 %define PIT_DIVISOR     11931
@@ -257,8 +258,6 @@ long_mode_start:
     out 0xE9, al
 %endif
 
-    sti
-
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'S'
     out 0xE9, al
@@ -275,19 +274,7 @@ long_mode_start:
     mov rax, RUST_BASE
     call rax
 
-%ifdef SAFIROS_QEMU_TEST
-    mov al, 'R'
-    out 0xE9, al
-%endif
-
-    mov al, 0xFE
-    out 0x21, al
-
-%ifdef SAFIROS_QEMU_TEST
-    mov al, 'U'
-    out 0xE9, al
-%endif
-
+    cli
 .idle:
     hlt
     jmp .idle
@@ -339,43 +326,53 @@ print_hex64:
 
 
 timer_interrupt:
-%ifdef SAFIROS_QEMU_TEST
-    mov al, 'T'
-    out 0xE9, al
-%endif
     push rax
     push rbx
     push rcx
     push rdx
     push rdi
     push rsi
+    push rbp
+    push r8
+    push r9
+    push r10
+    push r11
+    push r12
+    push r13
+    push r14
+    push r15
 
-    mov rax, [timer_ticks]
-    inc rax
-    mov [timer_ticks], rax
-    mov rsi, rax
+    mov rdi, rsp
+    mov r12, rsp
+    mov rax, [PREEMPT_HOOK_SLOT]
+    test rax, rax
+    jz .no_hook
 
-    mov rdi, VGA_BASE + (80 * 6) + 14
-    call print_hex64
+    and rsp, -16
+    call rax
+    mov r13, rax
+    mov rsp, r12
+    mov r12, r13
+    jmp .eoi
 
-%ifdef SAFIROS_QEMU_TEST
-    cmp rsi, 1
-    jne .test_exit_check
-    mov al, 'T'
-    out 0xE9, al
+.no_hook:
+    mov r12, rsp
 
-.test_exit_check:
-    cmp rsi, 10
-    jb .test_done
-    mov al, 0x10
-    out 0xF4, al
-.test_done:
-%endif
-
-    ; EOI to the master 8259.
+.eoi:
     mov al, 0x20
     out 0x20, al
+    mov rsp, r12
 
+.restore:
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rbp
     pop rsi
     pop rdi
     pop rdx
