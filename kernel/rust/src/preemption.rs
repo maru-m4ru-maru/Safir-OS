@@ -94,7 +94,6 @@ static mut RUNTIME: RuntimeState = RuntimeState::new();
 
 #[cfg(not(feature = "host-test"))]
 global_asm!(r#"
-.intel_syntax noprefix
 
 .global safiros_preemptive_start
 .type safiros_preemptive_start, @function
@@ -117,7 +116,6 @@ safiros_preemptive_start:
     pop rax
     iretq
 
-.att_syntax
 "#);
 
 #[cfg(not(feature = "host-test"))]
@@ -214,7 +212,7 @@ pub unsafe fn init_preemption(test_mode: u64) -> ! {
         debugcon(b'R');
     }
 
-    safiros_preemptive_start(frame_a)
+    safiros_preemptive_start(frame_a as *mut InterruptContext)
 }
 
 #[unsafe(no_mangle)]
@@ -239,7 +237,6 @@ pub unsafe extern "C" fn preempt_timer_tick(ctx: *mut InterruptContext) -> *mut 
 
     runtime.frames[current] = current_frame;
 
-    let current_id = runtime.tasks[current].id();
     let Some(next_id) = runtime.scheduler.next() else {
         return ctx;
     };
@@ -274,7 +271,12 @@ pub unsafe extern "C" fn preempt_timer_tick(ctx: *mut InterruptContext) -> *mut 
         }
     }
 
-    runtime.frames[next] as *mut InterruptContext
+    let next_frame = runtime.frames[next];
+    if next_frame == 0 || (next_frame & 7) != 0 {
+        return ctx;
+    }
+
+    next_frame as *mut InterruptContext
 }
 
 #[cfg(test)]
