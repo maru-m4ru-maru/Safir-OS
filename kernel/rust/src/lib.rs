@@ -1,6 +1,7 @@
 #![cfg_attr(not(feature = "host-test"), no_std)]
 
 pub mod memory;
+pub mod ring_buffer;
 mod vga;
 
 #[cfg(not(feature = "host-test"))]
@@ -15,6 +16,7 @@ pub use memory::{
     PhysicalMemoryManager,
     PhysFrame,
 };
+pub use ring_buffer::RingBuffer;
 
 #[cfg(not(feature = "host-test"))]
 #[panic_handler]
@@ -42,13 +44,17 @@ pub extern "C" fn rust_main(e820_ptr: u64, e820_len: usize) {
 
     let mut writer = vga::Writer::new();
     writer.clear();
-    writer.write_bytes(b"SafirOS Rust Kernel\n");
-    writer.write_bytes(b"Kernel Core: OK\n");
+    writer.write_bytes(b"SafirOS Rust Kernel
+");
+    writer.write_bytes(b"Kernel Core: OK
+");
 
     if memory_map.is_empty() {
-        writer.write_bytes(b"Memory Map: EMPTY\n");
+        writer.write_bytes(b"Memory Map: EMPTY
+");
     } else {
-        writer.write_bytes(b"Memory Map: OK\n");
+        writer.write_bytes(b"Memory Map: OK
+");
     }
 
     if physical_memory.free_frames() > 0 {
