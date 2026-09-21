@@ -72,7 +72,7 @@ mod tests {
 
     #[test]
     fn starts_empty() {
-        let buffer = RingBuffer::<4>::new();
+        let mut buffer = RingBuffer::<4>::new();
         assert!(buffer.is_empty());
         assert!(!buffer.is_full());
         assert_eq!(buffer.len(), 0);
