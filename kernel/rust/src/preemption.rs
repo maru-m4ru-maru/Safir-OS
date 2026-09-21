@@ -114,9 +114,49 @@ safiros_preemptive_start:
     pop rcx
     pop rbx
     pop rax
+
+    mov r10, rsp
     mov al, 'I'
     out 0xE9, al
+
+    mov rax, [r10]
+    mov rdx, rax
+    mov rcx, 8
+.iretd_rip:
+    mov rax, rdx
+    shr rax, 60
+    mov al, [safiros_hex + rax]
+    out 0xE9, al
+    shl rdx, 4
+    loop .iretd_rip
+
+    mov rax, [r10 + 8]
+    mov rdx, rax
+    mov rcx, 4
+.iretd_cs:
+    mov rax, rdx
+    shr rax, 12
+    mov al, [safiros_hex + rax]
+    out 0xE9, al
+    shl rdx, 4
+    loop .iretd_cs
+
+    mov rax, [r10 + 16]
+    mov rdx, rax
+    mov rcx, 8
+.iretd_flags:
+    mov rax, rdx
+    shr rax, 60
+    mov al, [safiros_hex + rax]
+    out 0xE9, al
+    shl rdx, 4
+    loop .iretd_flags
+
+    mov rsp, r10
     iretq
+
+safiros_hex:
+    .ascii "0123456789ABCDEF"
 
 "#);
 
