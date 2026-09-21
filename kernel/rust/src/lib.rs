@@ -6,7 +6,7 @@ mod vga;
 #[cfg(not(feature = "host-test"))]
 use core::panic::PanicInfo;
 
-pub use memory::Bitmap;
+pub use memory::{Bitmap, E820Entry, MemoryMap, MemoryRegion};
 
 #[cfg(not(feature = "host-test"))]
 #[panic_handler]
@@ -18,12 +18,20 @@ fn panic(_info: &PanicInfo) -> ! {
 
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".text.rust_main")]
-pub extern "C" fn rust_main() {
-    let mut frames = memory::Bitmap::<2>::new();
-    let _ = frames.allocate();
+pub extern "C" fn rust_main(e820_ptr: u64, e820_len: usize) {
+    let memory_map = unsafe {
+        MemoryMap::<32>::from_raw(e820_ptr as *const E820Entry, e820_len)
+    };
 
     let mut writer = vga::Writer::new();
     writer.clear();
-    writer.write_bytes(b"SafirOS Rust Kernel\n");
-    writer.write_bytes(b"Kernel Core: OK");
+    writer.write_bytes(b"SafirOS Rust Kernel
+");
+    writer.write_bytes(b"Kernel Core: OK
+");
+    if memory_map.is_empty() {
+        writer.write_bytes(b"Memory Map: EMPTY");
+    } else {
+        writer.write_bytes(b"Memory Map: OK");
+    }
 }
