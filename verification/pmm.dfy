@@ -2,7 +2,6 @@ module PhysicalMemorySpec {
 
 predicate ValidSet(s: set<nat>)
 {
-  |s| <= 64 &&
   forall i: nat :: i in s ==> i < 64
 }
 
@@ -39,7 +38,6 @@ method AllocateFirst(usedSet: set<nat>, reserved: set<nat>)
   while i < 64
     invariant i <= 64
     invariant ValidState(usedSet, reserved)
-    invariant |usedSet| < 64
     invariant forall j: nat :: j < i ==> j in usedSet || j in reserved
     decreases 64 - i
   {
