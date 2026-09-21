@@ -44,17 +44,13 @@ pub extern "C" fn rust_main(e820_ptr: u64, e820_len: usize) {
 
     let mut writer = vga::Writer::new();
     writer.clear();
-    writer.write_bytes(b"SafirOS Rust Kernel
-");
-    writer.write_bytes(b"Kernel Core: OK
-");
+    writer.write_bytes(b"SafirOS Rust Kernel\n");
+    writer.write_bytes(b"Kernel Core: OK\n");
 
     if memory_map.is_empty() {
-        writer.write_bytes(b"Memory Map: EMPTY
-");
+        writer.write_bytes(b"Memory Map: EMPTY\n");
     } else {
-        writer.write_bytes(b"Memory Map: OK
-");
+        writer.write_bytes(b"Memory Map: OK\n");
     }
 
     if physical_memory.free_frames() > 0 {
