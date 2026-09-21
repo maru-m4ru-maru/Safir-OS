@@ -114,6 +114,8 @@ safiros_preemptive_start:
     pop rcx
     pop rbx
     pop rax
+    mov al, 'I'
+    out 0xE9, al
     iretq
 
 "#);
