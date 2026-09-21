@@ -399,7 +399,12 @@ timer_interrupt:
 %endif
 
     mov rsp, PREEMPT_STACK_TOP
-    call rax
+    sub rsp, 8
+    lea r13, [rel .preempt_callback_return]
+    mov [rsp], r13
+    jmp rax
+
+.preempt_callback_return:
     mov r13, rax
     mov rsp, r15
 
