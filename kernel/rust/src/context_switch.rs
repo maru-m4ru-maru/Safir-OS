@@ -31,88 +31,90 @@ safiros_context_switch:
     pop rax
     mov qword ptr [rdi + 136], rax
 
-    mov rax, qword ptr [rsi + 136]
+    mov r10, rsi
+    mov rax, qword ptr [r10 + 136]
     push rax
     popfq
-    mov r15, qword ptr [rsi + 112]
-    mov r14, qword ptr [rsi + 104]
-    mov r13, qword ptr [rsi + 96]
-    mov r12, qword ptr [rsi + 88]
-    mov r11, qword ptr [rsi + 80]
-    mov r10, qword ptr [rsi + 72]
-    mov r9, qword ptr [rsi + 64]
-    mov r8, qword ptr [rsi + 56]
-    mov rbp, qword ptr [rsi + 48]
-    mov rdx, qword ptr [rsi + 24]
-    mov rcx, qword ptr [rsi + 16]
-    mov rbx, qword ptr [rsi + 8]
-    mov rdi, qword ptr [rsi + 40]
-    mov rsi, qword ptr [rsi + 32]
-    mov rsp, qword ptr [rsi + 120]
-    mov rax, qword ptr [rsi + 128]
+    mov r15, qword ptr [r10 + 112]
+    mov r14, qword ptr [r10 + 104]
+    mov r13, qword ptr [r10 + 96]
+    mov r12, qword ptr [r10 + 88]
+    mov r11, qword ptr [r10 + 80]
+    mov r9, qword ptr [r10 + 64]
+    mov r8, qword ptr [r10 + 56]
+    mov rbp, qword ptr [r10 + 48]
+    mov rdx, qword ptr [r10 + 24]
+    mov rcx, qword ptr [r10 + 16]
+    mov rbx, qword ptr [r10 + 8]
+    mov rdi, qword ptr [r10 + 40]
+    mov rsi, qword ptr [r10 + 32]
+    mov rsp, qword ptr [r10 + 120]
+    mov rax, qword ptr [r10 + 128]
     push rax
-    mov rax, qword ptr [rsi + 0]
+    mov rax, qword ptr [r10 + 0]
+    mov r10, qword ptr [r10 + 72]
     ret
 
 .global safiros_start_first_task
 .type safiros_start_first_task, @function
 safiros_start_first_task:
-    mov rax, qword ptr [rdi + 136]
+    mov r10, rdi
+    mov rax, qword ptr [r10 + 136]
     push rax
     popfq
-    mov r15, qword ptr [rdi + 112]
-    mov r14, qword ptr [rdi + 104]
-    mov r13, qword ptr [rdi + 96]
-    mov r12, qword ptr [rdi + 88]
-    mov r11, qword ptr [rdi + 80]
-    mov r10, qword ptr [rdi + 72]
-    mov r9, qword ptr [rdi + 64]
-    mov r8, qword ptr [rdi + 56]
-    mov rbp, qword ptr [rdi + 48]
-    mov rdx, qword ptr [rdi + 24]
-    mov rcx, qword ptr [rdi + 16]
-    mov rbx, qword ptr [rdi + 8]
-    mov rdi, qword ptr [rdi + 40]
-    mov rsi, qword ptr [rdi + 32]
-    mov rsp, qword ptr [rdi + 120]
+    mov r15, qword ptr [r10 + 112]
+    mov r14, qword ptr [r10 + 104]
+    mov r13, qword ptr [r10 + 96]
+    mov r12, qword ptr [r10 + 88]
+    mov r11, qword ptr [r10 + 80]
+    mov r9, qword ptr [r10 + 64]
+    mov r8, qword ptr [r10 + 56]
+    mov rbp, qword ptr [r10 + 48]
+    mov rdx, qword ptr [r10 + 24]
+    mov rcx, qword ptr [r10 + 16]
+    mov rbx, qword ptr [r10 + 8]
+    mov rdi, qword ptr [r10 + 40]
+    mov rsi, qword ptr [r10 + 32]
+    mov rsp, qword ptr [r10 + 120]
     sub rsp, 24
-    mov rax, qword ptr [rdi + 128]
+    mov rax, qword ptr [r10 + 128]
     mov qword ptr [rsp + 0], rax
     mov qword ptr [rsp + 8], 0x18
-    mov rax, qword ptr [rdi + 136]
+    mov rax, qword ptr [r10 + 136]
     mov qword ptr [rsp + 16], rax
-    mov rax, qword ptr [rdi + 0]
+    mov rax, qword ptr [r10 + 0]
+    mov r10, qword ptr [r10 + 72]
     iretq
 
 .global safiros_restore_context
 .type safiros_restore_context, @function
 safiros_restore_context:
-    mov rax, qword ptr [rdi + 136]
+    mov r10, rdi
+    mov rax, qword ptr [r10 + 136]
     push rax
     popfq
-    mov r15, qword ptr [rdi + 112]
-    mov r14, qword ptr [rdi + 104]
-    mov r13, qword ptr [rdi + 96]
-    mov r12, qword ptr [rdi + 88]
-    mov r11, qword ptr [rdi + 80]
-    mov r10, qword ptr [rdi + 72]
-    mov r9, qword ptr [rdi + 64]
-    mov r8, qword ptr [rdi + 56]
-    mov rbp, qword ptr [rdi + 48]
-    mov rdx, qword ptr [rdi + 24]
-    mov rcx, qword ptr [rdi + 16]
-    mov rbx, qword ptr [rdi + 8]
-    mov rsi, qword ptr [rdi + 32]
-    mov rsp, qword ptr [rdi + 120]
+    mov r15, qword ptr [r10 + 112]
+    mov r14, qword ptr [r10 + 104]
+    mov r13, qword ptr [r10 + 96]
+    mov r12, qword ptr [r10 + 88]
+    mov r11, qword ptr [r10 + 80]
+    mov r9, qword ptr [r10 + 64]
+    mov r8, qword ptr [r10 + 56]
+    mov rbp, qword ptr [r10 + 48]
+    mov rdx, qword ptr [r10 + 24]
+    mov rcx, qword ptr [r10 + 16]
+    mov rbx, qword ptr [r10 + 8]
+    mov rsi, qword ptr [r10 + 32]
+    mov rsp, qword ptr [r10 + 120]
     sub rsp, 24
-    mov rax, qword ptr [rdi + 128]
+    mov rax, qword ptr [r10 + 128]
     mov qword ptr [rsp + 0], rax
     mov qword ptr [rsp + 8], 0x18
-    mov rax, qword ptr [rdi + 136]
+    mov rax, qword ptr [r10 + 136]
     mov qword ptr [rsp + 16], rax
-    mov rdi, qword ptr [rdi + 40]
-    mov rax, qword ptr [rsp]
-    mov rax, qword ptr [rdi + 0]
+    mov rdi, qword ptr [r10 + 40]
+    mov rax, qword ptr [r10 + 0]
+    mov r10, qword ptr [r10 + 72]
     iretq
 
 .global safiros_timer_interrupt
@@ -169,6 +171,7 @@ safiros_task_b:
 
 .att_syntax
 "#);
+
 
 unsafe extern "C" {
     fn safiros_context_switch(old: *mut CpuContext, new: *const CpuContext);
