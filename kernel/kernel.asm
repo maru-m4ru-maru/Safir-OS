@@ -206,6 +206,30 @@ long_mode_start:
     mov dword [rdi + 8], eax
     mov dword [rdi + 12], 0
 
+    ; Fault diagnostics for the initial task iret path.
+%macro install_fault_gate 2
+    mov rdi, IDT_BASE + (%1 * 16)
+    mov rax, KERNEL_BASE + %2
+    mov word [rdi + 0], ax
+    mov word [rdi + 2], 0x18
+    mov byte [rdi + 4], 0
+    mov byte [rdi + 5], 0x8E
+    shr rax, 16
+    mov word [rdi + 6], ax
+    shr rax, 16
+    mov dword [rdi + 8], eax
+    mov dword [rdi + 12], 0
+%endmacro
+
+    install_fault_gate 6, fault_ud
+    install_fault_gate 8, fault_df
+    install_fault_gate 10, fault_ts
+    install_fault_gate 11, fault_np
+    install_fault_gate 12, fault_ss
+    install_fault_gate 13, fault_gp
+    install_fault_gate 14, fault_pf
+%undef install_fault_gate
+
     lidt [KERNEL_BASE + idtr]
 
 %ifdef SAFIROS_QEMU_TEST
@@ -397,7 +421,75 @@ timer_interrupt:
     iretq
 
 
+fault_ud:
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'U'
+    out 0xE9, al
+%endif
+    jmp default_halt
+
+fault_df:
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'D'
+    out 0xE9, al
+%endif
+    jmp default_halt
+
+fault_ts:
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'T'
+    out 0xE9, al
+%endif
+    jmp default_halt
+
+fault_np:
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'N'
+    out 0xE9, al
+%endif
+    jmp default_halt
+
+fault_ss:
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'S'
+    out 0xE9, al
+%endif
+    jmp default_halt
+
+fault_gp:
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'G'
+    out 0xE9, al
+%endif
+    jmp default_halt
+
+fault_pf:
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'P'
+    out 0xE9, al
+%endif
+
+default_halt:
+    cli
+.fault_halt:
+    hlt
+    jmp .fault_halt
+
+
 default_interrupt:
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'E'
+    out 0xE9, al
+%endif
+    cli
+    mov rdi, VGA_BASE + (80 * 8)
+    mov rsi, KERNEL_BASE + msg_fault
+    call vga_print
+.halt:
+    hlt
+    jmp .halt
+
+
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'E'
     out 0xE9, al

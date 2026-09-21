@@ -114,6 +114,10 @@ safiros_preemptive_start:
     pop rcx
     pop rbx
     pop rax
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'I'
+    out 0xE9, al
+%endif
     iretq
 
 "#);
