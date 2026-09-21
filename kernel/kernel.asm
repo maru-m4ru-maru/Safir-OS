@@ -342,15 +342,30 @@ timer_interrupt:
     push r14
     push r15
 
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'T'
+    out 0xE9, al
+%endif
+
     mov rdi, rsp
     mov r12, rsp
     mov rax, [PREEMPT_HOOK_SLOT]
     test rax, rax
     jz .no_hook
 
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'C'
+    out 0xE9, al
+%endif
+
     and rsp, -16
     call rax
     mov r13, rax
+
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'D'
+    out 0xE9, al
+%endif
     mov rsp, r12
     mov r12, r13
     jmp .eoi
