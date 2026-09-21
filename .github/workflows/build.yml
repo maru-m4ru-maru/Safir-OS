@@ -105,6 +105,15 @@ jobs:
         run: |
           bash scripts/build-kernel.sh
 
+      - name: Inspect preemption hook
+        run: |
+          HOOK_ADDR="$(nm -n build/rust.elf | awk '$3=="preempt_timer_tick" {print $1; exit}')"
+          test -n "$HOOK_ADDR"
+          START=$((16#$HOOK_ADDR))
+          STOP=$((START + 128))
+          objdump -d --start-address="$START" --stop-address="$STOP" build/rust.elf
+          echo "preempt_timer_tick=$HOOK_ADDR"
+
       - name: Validate binaries
         run: |
           test "$(stat -c%s build/boot.bin)" -eq 512
