@@ -2,6 +2,7 @@ module PhysicalMemorySpec {
 
 predicate ValidSet(s: set<nat>)
 {
+  |s| <= 64 &&
   forall i: nat :: i in s ==> i < 64
 }
 
