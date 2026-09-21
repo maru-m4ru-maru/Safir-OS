@@ -3,7 +3,6 @@ use core::arch::global_asm;
 use crate::CpuContext;
 
 global_asm!(r#"
-.intel_syntax noprefix
 
 .equ CTX_A, 0x68000
 .equ CTX_B, 0x68080
@@ -215,7 +214,6 @@ context_test_fail:
     hlt
     jmp .halt
 
-.att_syntax
 "#);
 
 unsafe extern "C" {
