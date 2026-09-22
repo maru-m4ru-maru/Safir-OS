@@ -70,6 +70,8 @@ const TASK_BOOTSTRAP_BIT: usize = 1usize << 63;
 #[cfg(not(feature = "host-test"))]
 const KEYBOARD_TEST_SEEN_SLOT: usize = 0x0005F018;
 #[cfg(not(feature = "host-test"))]
+const KEYBOARD_TEST_WAIT_BUDGET: usize = 100_000_000;
+#[cfg(not(feature = "host-test"))]
 const TRACE_TICKS: u64 = 8;
 
 #[repr(C)]
@@ -298,9 +300,21 @@ pub unsafe fn init_preemption(test_mode: u64) -> ! {
             asm!("sti", options(nomem, nostack));
         }
 
-        while core::ptr::read_volatile(KEYBOARD_TEST_SEEN_SLOT as *const u8) == 0 {
+        let mut wait_budget = KEYBOARD_TEST_WAIT_BUDGET;
+        while core::ptr::read_volatile(KEYBOARD_TEST_SEEN_SLOT as *const u8) == 0 && wait_budget != 0 {
+            wait_budget -= 1;
             unsafe {
-                asm!("hlt", options(nomem, nostack, preserves_flags));
+                asm!("pause", options(nomem, nostack, preserves_flags));
+            }
+        }
+
+        if wait_budget == 0 {
+            debugcon(b'F');
+            qemu_exit(0x11);
+            loop {
+                unsafe {
+                    asm!("cli; hlt", options(nomem, nostack, preserves_flags));
+                }
             }
         }
 
