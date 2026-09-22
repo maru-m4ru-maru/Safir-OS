@@ -1,6 +1,7 @@
 #![cfg_attr(not(feature = "host-test"), no_std)]
 
 pub mod context_switch;
+pub mod keyboard;
 pub mod memory;
 pub mod preemption;
 pub mod ring_buffer;
@@ -12,6 +13,7 @@ mod vga;
 use core::panic::PanicInfo;
 
 pub use context_switch::context_switch;
+pub use keyboard::KeyboardDecoder;
 pub use preemption::InterruptContext;
 pub use memory::{
     Bitmap,
@@ -55,17 +57,13 @@ pub extern "C" fn rust_main(e820_ptr: u64, e820_len: usize, test_mode: u64) {
 
     let mut writer = vga::Writer::new();
     writer.clear();
-    writer.write_bytes(b"SafirOS Rust Kernel
-");
-    writer.write_bytes(b"Kernel Core: OK
-");
+    writer.write_bytes(b"SafirOS Rust Kernel\n");
+    writer.write_bytes(b"Kernel Core: OK\n");
 
     if memory_map.is_empty() {
-        writer.write_bytes(b"Memory Map: EMPTY
-");
+        writer.write_bytes(b"Memory Map: EMPTY\n");
     } else {
-        writer.write_bytes(b"Memory Map: OK
-");
+        writer.write_bytes(b"Memory Map: OK\n");
     }
 
     if physical_memory.free_frames() > 0 {
