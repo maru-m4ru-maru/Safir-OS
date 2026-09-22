@@ -230,6 +230,10 @@ long_mode_start:
     out 0xE9, al
 %endif
 
+    ; Initialize the 8042 controller and PS/2 keyboard before enabling IRQ1.
+    ; Force keyboard IRQ1 and Set 1 translation so the decoder receives XT scancodes.
+    call ps2_init_keyboard
+
     ; 8259 PIC remap: IRQ0..7 -> vectors 0x20..0x27,
     ; IRQ8..15 -> vectors 0x28..0x2F.
     mov al, 0x11
@@ -344,6 +348,73 @@ print_hex64:
     loop .hex_loop
     ret
 
+
+
+; ------------------------------------------------------------
+; 8042 / PS/2 keyboard initialization
+; Waits for controller readiness, enables IRQ1 and translation,
+; enables keyboard scanning, and drains command responses.
+; ------------------------------------------------------------
+ps2_wait_input_clear:
+.wait:
+    in al, 0x64
+    test al, 0x02
+    jnz .wait
+    ret
+
+ps2_flush_output:
+.flush:
+    in al, 0x64
+    test al, 0x01
+    jz .done
+    in al, 0x60
+    jmp .flush
+.done:
+    ret
+
+ps2_init_keyboard:
+    ; Disable keyboard interface while programming the controller.
+    call ps2_wait_input_clear
+    mov al, 0xAD
+    out 0x64, al
+    call ps2_wait_input_clear
+    call ps2_flush_output
+
+    ; Read controller configuration byte.
+    call ps2_wait_input_clear
+    mov al, 0x20
+    out 0x64, al
+    call ps2_wait_input_clear
+.read_config_wait:
+    in al, 0x64
+    test al, 0x01
+    jz .read_config_wait
+    in al, 0x60
+    ; IRQ1 = bit 0, translation = bit 6, keyboard clock enabled = bit 4 clear.
+    or al, 0x41
+    and al, 0xEF
+    push rax
+
+    ; Write controller configuration byte.
+    call ps2_wait_input_clear
+    mov al, 0x60
+    out 0x64, al
+    call ps2_wait_input_clear
+    pop rax
+    out 0x60, al
+
+    ; Re-enable keyboard interface.
+    call ps2_wait_input_clear
+    mov al, 0xAE
+    out 0x64, al
+
+    ; Enable keyboard scanning (0xF4). IRQ1 remains masked in the PIC here,
+    ; so the ACK can be safely drained before normal interrupt handling.
+    call ps2_wait_input_clear
+    mov al, 0xF4
+    out 0x60, al
+    call ps2_flush_output
+    ret
 
 keyboard_interrupt:
     push rax
