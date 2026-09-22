@@ -187,8 +187,27 @@ jobs:
           except OSError:
               pass
 
+          deadline = time.time() + 2.0
+          while time.time() < deadline:
+              try:
+                  with open("build/debugcon.log", "rb") as log:
+                      trace = log.read()
+              except FileNotFoundError:
+                  trace = b""
+
+              if b"R" in trace:
+                  break
+
+              time.sleep(0.005)
+          else:
+              sock.close()
+              raise SystemExit("preemption bootstrap marker R was not observed")
+
           sock.sendall(b"sendkey a\n")
-          time.sleep(0.02)
+          try:
+              sock.recv(4096)
+          except OSError:
+              pass
           sock.close()
           PY
 
