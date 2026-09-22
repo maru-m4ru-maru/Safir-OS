@@ -2,7 +2,7 @@ bits 16
 org 0x0000
 
 %define KERNEL_LOAD_SEGMENT 0x1000
-%define KERNEL_SECTORS 35
+%define KERNEL_SECTORS 64
 
 start:
     cli
@@ -21,11 +21,12 @@ start:
     mov si, KERNEL_SECTORS
     mov byte [current_sector], 2
     mov byte [current_head], 0
+    mov byte [current_cylinder], 0
 
 .read_kernel:
     mov ah, 0x02
     mov al, 0x01
-    xor ch, ch
+    mov ch, [current_cylinder]
     mov cl, [current_sector]
     mov dh, [current_head]
     mov dl, [boot_drive]
@@ -43,6 +44,11 @@ start:
     mov byte [current_sector], 1
     inc byte [current_head]
     cmp byte [current_head], 2
+    jb .read_kernel
+
+    mov byte [current_head], 0
+    inc byte [current_cylinder]
+    cmp byte [current_cylinder], 80
     jb .read_kernel
 
     jmp disk_error
@@ -72,6 +78,7 @@ disk_error:
 boot_drive db 0
 current_sector db 0
 current_head db 0
+current_cylinder db 0
 error_message db "SafirOS: Kernel load failed.", 13, 10, 0
 
 times 510 - ($ - $$) db 0
