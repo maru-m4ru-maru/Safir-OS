@@ -7,6 +7,7 @@ pub mod preemption;
 pub mod ring_buffer;
 pub mod scheduler;
 pub mod task;
+mod shell;
 mod vga;
 
 #[cfg(not(feature = "host-test"))]
