@@ -1,3 +1,5 @@
+pub const PROMPT: &[u8] = b"safiros> ";
+
 const MAX_LINE_LENGTH: usize = 96;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
