@@ -92,6 +92,7 @@ impl Shell {
         self.length = 0;
     }
 
+    #[cfg(test)]
     pub const fn length(&self) -> usize {
         self.length
     }
