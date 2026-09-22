@@ -1,6 +1,9 @@
 use core::arch::asm;
 
 #[cfg(not(feature = "host-test"))]
+use core::sync::atomic::{AtomicBool, Ordering};
+
+#[cfg(not(feature = "host-test"))]
 use core::arch::global_asm;
 
 use crate::{CpuContext, Scheduler, Task, TaskState};
@@ -104,6 +107,9 @@ impl RuntimeState {
 
 #[unsafe(link_section = ".data")]
 static mut RUNTIME: RuntimeState = RuntimeState::new();
+
+#[cfg(not(feature = "host-test"))]
+static TRACE_ENABLED: AtomicBool = AtomicBool::new(false);
 
 #[cfg(not(feature = "host-test"))]
 global_asm!(r#"
@@ -225,10 +231,8 @@ pub extern "C" fn preempt_task_a() -> ! {
         if let Some(byte) = crate::keyboard::pop_byte() {
             crate::vga::console_write_byte(byte);
             #[cfg(not(feature = "host-test"))]
-            unsafe {
-                if (*core::ptr::addr_of!(RUNTIME)).trace_enabled {
-                    debugcon(b'V');
-                }
+            if TRACE_ENABLED.load(Ordering::Relaxed) {
+                debugcon(b'V');
             }
         }
         unsafe {
@@ -277,6 +281,7 @@ pub unsafe fn init_preemption(test_mode: u64) -> ! {
 
     runtime.trace_enabled = test_mode != 0;
     runtime.trace_ticks = 0;
+    TRACE_ENABLED.store(runtime.trace_enabled, Ordering::Relaxed);
     runtime.initialized = true;
 
     core::ptr::write_volatile(
