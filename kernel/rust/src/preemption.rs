@@ -224,6 +224,12 @@ pub extern "C" fn preempt_task_a() -> ! {
     loop {
         if let Some(byte) = crate::keyboard::pop_byte() {
             crate::vga::console_write_byte(byte);
+            #[cfg(not(feature = "host-test"))]
+            unsafe {
+                if (*core::ptr::addr_of!(RUNTIME)).trace_enabled {
+                    debugcon(b'V');
+                }
+            }
         }
         unsafe {
             asm!("hlt", options(nomem, nostack, preserves_flags));
