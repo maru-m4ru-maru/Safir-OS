@@ -114,7 +114,7 @@ fn trim_spaces(bytes: &[u8]) -> &[u8] {
 
 #[cfg(test)]
 mod tests {
-    use super::{Command, InputAction, Shell};
+    use super::{Command, InputAction, Shell, MAX_LINE_LENGTH};
 
     fn enter(shell: &mut Shell, text: &[u8]) {
         for &byte in text {
