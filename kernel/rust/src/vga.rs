@@ -4,6 +4,7 @@ const VGA_BASE: usize = 0xB8000;
 const VGA_WIDTH: usize = 80;
 const VGA_HEIGHT: usize = 25;
 const DEFAULT_ATTRIBUTE: u8 = 0x07;
+const CONSOLE_START_ROW: usize = 6;
 
 pub struct Writer {
     row: usize,
@@ -95,13 +96,12 @@ impl Writer {
     }
 }
 
-
 static mut CONSOLE_WRITER: Writer = Writer::new();
 
 pub fn console_init() {
     unsafe {
         let writer = &mut *core::ptr::addr_of_mut!(CONSOLE_WRITER);
-        writer.row = 6;
+        writer.row = CONSOLE_START_ROW;
         writer.column = 0;
         writer.write_bytes(b"SafirOS Rust Kernel\n");
         writer.write_bytes(b"Kernel Core: OK\n");
