@@ -273,8 +273,8 @@ pub fn pop_byte() -> Option<u8> {
 
     unsafe {
         asm!(
-            "pushfq
-            pop {}",
+            "pushfq",
+            "pop {}",
             out(reg) flags,
             options(nomem, preserves_flags)
         );
