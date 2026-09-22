@@ -2,7 +2,7 @@ bits 16
 org 0x0000
 
 %define KERNEL_LOAD_SEGMENT 0x1000
-%define KERNEL_SECTORS 32
+%define KERNEL_SECTORS 35
 
 start:
     cli
