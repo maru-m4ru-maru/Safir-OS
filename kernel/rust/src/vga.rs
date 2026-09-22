@@ -108,6 +108,13 @@ pub fn console_init() {
     }
 }
 
+pub fn console_clear() {
+    unsafe {
+        let writer = &mut *core::ptr::addr_of_mut!(CONSOLE_WRITER);
+        writer.clear();
+    }
+}
+
 pub fn console_write_bytes(bytes: &[u8]) {
     unsafe {
         let writer = &mut *core::ptr::addr_of_mut!(CONSOLE_WRITER);
