@@ -248,7 +248,18 @@ jobs:
 
           trace="$(tr -d "\n" < build/debugcon.log)"
           preemption_trace="${trace//K/}"
+          preemption_trace="${preemption_trace//V/}"
 
-          test "$trace" = "PICHSJRKVTBTATBTATBTATBTAQ"
-          test "$preemption_trace" = "PICHSJRTBTATBTATBTATBTAQ"
+          test "${trace:0:7}" = "PICHSJR"
+          test "${trace: -1}" = "Q"
           test "$(tr -cd "K" < build/debugcon.log | wc -c)" -eq 1
+          test "$(tr -cd "V" < build/debugcon.log | wc -c)" -eq 1
+          case "$trace" in
+            *K*V*) ;;
+            *)
+              echo "Keyboard input was not consumed by Task A in time"
+              exit 1
+              ;;
+          esac
+
+          test "$preemption_trace" = "PICHSJRTBTATBTATBTATBTAQ"
