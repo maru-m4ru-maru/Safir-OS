@@ -1,3 +1,5 @@
+use crate::RingBuffer;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct KeyboardDecoder {
     shift: bool,
@@ -204,5 +206,113 @@ mod tests {
         assert_eq!(decoder.feed(0xB6), None);
         assert!(!decoder.shift_active());
         assert_eq!(decoder.feed(0x1E), Some(b'a'));
+    }
+}
+
+
+pub const KEYBOARD_HOOK_SLOT: usize = 0x0005F010;
+const KEYBOARD_BUFFER_CAPACITY: usize = 64;
+
+pub struct KeyboardInput<const N: usize> {
+    decoder: KeyboardDecoder,
+    buffer: RingBuffer<N>,
+}
+
+impl<const N: usize> KeyboardInput<N> {
+    pub const fn new() -> Self {
+        Self {
+            decoder: KeyboardDecoder::new(),
+            buffer: RingBuffer::new(),
+        }
+    }
+
+    pub fn feed_scancode(&mut self, scancode: u8) -> bool {
+        let Some(byte) = self.decoder.feed(scancode) else {
+            return false;
+        };
+
+        self.buffer.push(byte)
+    }
+
+    pub fn pop(&mut self) -> Option<u8> {
+        self.buffer.pop()
+    }
+
+    pub const fn len(&self) -> usize {
+        self.buffer.len()
+    }
+
+    pub const fn is_empty(&self) -> bool {
+        self.buffer.is_empty()
+    }
+
+    pub const fn is_full(&self) -> bool {
+        self.buffer.is_full()
+    }
+}
+
+static mut KEYBOARD_INPUT: KeyboardInput<KEYBOARD_BUFFER_CAPACITY> =
+    KeyboardInput::new();
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn keyboard_irq(scancode: u8) -> u64 {
+    let input = &mut *core::ptr::addr_of_mut!(KEYBOARD_INPUT);
+    if input.feed_scancode(scancode) {
+        1
+    } else {
+        0
+    }
+}
+
+#[cfg(test)]
+mod input_tests {
+    use super::KeyboardInput;
+
+    #[test]
+    fn input_queue_decodes_and_buffers_keys() {
+        let mut input = KeyboardInput::<4>::new();
+        assert!(input.is_empty());
+        assert_eq!(input.len(), 0);
+
+        assert!(input.feed_scancode(0x1E));
+        assert!(input.feed_scancode(0x30));
+        assert_eq!(input.len(), 2);
+
+        assert_eq!(input.pop(), Some(b'a'));
+        assert_eq!(input.pop(), Some(b'b'));
+        assert_eq!(input.pop(), None);
+        assert!(input.is_empty());
+    }
+
+    #[test]
+    fn input_queue_ignores_break_codes() {
+        let mut input = KeyboardInput::<4>::new();
+        assert!(!input.feed_scancode(0x9E));
+        assert_eq!(input.pop(), None);
+    }
+
+    #[test]
+    fn input_queue_rejects_when_full() {
+        let mut input = KeyboardInput::<2>::new();
+        assert!(input.feed_scancode(0x1E));
+        assert!(input.feed_scancode(0x30));
+        assert!(!input.feed_scancode(0x2E));
+        assert!(input.is_full());
+        assert_eq!(input.pop(), Some(b'a'));
+        assert_eq!(input.pop(), Some(b'b'));
+        assert_eq!(input.pop(), None);
+    }
+
+    #[test]
+    fn input_queue_preserves_shift_and_caps_state() {
+        let mut input = KeyboardInput::<8>::new();
+        assert!(!input.feed_scancode(0x2A));
+        assert!(input.feed_scancode(0x1E));
+        assert!(!input.feed_scancode(0xAA));
+        assert!(!input.feed_scancode(0x3A));
+        assert!(input.feed_scancode(0x30));
+
+        assert_eq!(input.pop(), Some(b'A'));
+        assert_eq!(input.pop(), Some(b'B'));
     }
 }
