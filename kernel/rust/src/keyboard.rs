@@ -171,8 +171,10 @@ mod tests {
         let _ = decoder.feed(0x2A);
         assert_eq!(decoder.feed(0x02), Some(b'!'));
         let _ = decoder.feed(0xAA);
-        assert_eq!(decoder.feed(0x0D), Some(b'+'));
+        assert_eq!(decoder.feed(0x0D), Some(b'='));
+        let _ = decoder.feed(0x2A);
         assert_eq!(decoder.feed(0x35), Some(b'?'));
+        let _ = decoder.feed(0xAA);
     }
 
     #[test]
