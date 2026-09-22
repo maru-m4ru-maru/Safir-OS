@@ -222,6 +222,9 @@ pub extern "C" fn preempt_task_a() -> ! {
         asm!("sti", options(nomem, nostack));
     }
     loop {
+        if let Some(byte) = crate::keyboard::pop_byte() {
+            crate::vga::console_write_byte(byte);
+        }
         unsafe {
             asm!("hlt", options(nomem, nostack, preserves_flags));
         }
