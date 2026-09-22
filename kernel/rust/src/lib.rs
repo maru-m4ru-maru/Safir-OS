@@ -13,7 +13,7 @@ mod vga;
 use core::panic::PanicInfo;
 
 pub use context_switch::context_switch;
-pub use keyboard::KeyboardDecoder;
+pub use keyboard::{KeyboardDecoder, KeyboardInput};
 pub use preemption::InterruptContext;
 pub use memory::{
     Bitmap,
@@ -74,6 +74,10 @@ pub extern "C" fn rust_main(e820_ptr: u64, e820_len: usize, test_mode: u64) {
 
     #[cfg(not(feature = "host-test"))]
     unsafe {
+        core::ptr::write_volatile(
+            keyboard::KEYBOARD_HOOK_SLOT as *mut u64,
+            keyboard::keyboard_irq as *const () as usize as u64,
+        );
         preemption::init_preemption(test_mode);
     }
 
