@@ -1,5 +1,8 @@
 use crate::RingBuffer;
 
+#[cfg(not(feature = "host-test"))]
+use core::arch::asm;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct KeyboardDecoder {
     shift: bool,
@@ -261,6 +264,38 @@ pub unsafe extern "C" fn keyboard_irq(scancode: u8) -> u64 {
         1
     } else {
         0
+    }
+}
+
+#[cfg(not(feature = "host-test"))]
+pub fn pop_byte() -> Option<u8> {
+    let flags: u64;
+
+    unsafe {
+        asm!(
+            "pushfq
+            pop {}",
+            out(reg) flags,
+            options(nomem, preserves_flags)
+        );
+        asm!("cli", options(nomem, nostack, preserves_flags));
+
+        let input = &mut *core::ptr::addr_of_mut!(KEYBOARD_INPUT);
+        let byte = input.pop();
+
+        if flags & 0x200 != 0 {
+            asm!("sti", options(nomem, nostack, preserves_flags));
+        }
+
+        byte
+    }
+}
+
+#[cfg(feature = "host-test")]
+pub fn pop_byte() -> Option<u8> {
+    unsafe {
+        let input = &mut *core::ptr::addr_of_mut!(KEYBOARD_INPUT);
+        input.pop()
     }
 }
 
