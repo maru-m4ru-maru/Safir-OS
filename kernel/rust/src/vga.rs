@@ -44,7 +44,32 @@ impl Writer {
                     self.row += 1;
                 }
             }
-            byte => {
+            0x08 => {
+                if self.column > 0 {
+                    self.column -= 1;
+                } else if self.row > 0 {
+                    self.row -= 1;
+                    self.column = VGA_WIDTH - 1;
+                } else {
+                    return;
+                }
+                self.put_at(self.row, self.column, b' ');
+            }
+            b'\t' => {
+                let next = (self.column + 4) & !3;
+                while self.column < next {
+                    self.put_at(self.row, self.column, b' ');
+                    self.column += 1;
+                    if self.column == VGA_WIDTH {
+                        self.column = 0;
+                        if self.row + 1 < VGA_HEIGHT {
+                            self.row += 1;
+                        }
+                        break;
+                    }
+                }
+            }
+            0x20..=0x7E => {
                 self.put_at(self.row, self.column, byte);
                 self.column += 1;
                 if self.column == VGA_WIDTH {
@@ -54,6 +79,7 @@ impl Writer {
                     }
                 }
             }
+            _ => {}
         }
     }
 
@@ -66,5 +92,31 @@ impl Writer {
                 self.attribute,
             );
         }
+    }
+}
+
+
+static mut CONSOLE_WRITER: Writer = Writer::new();
+
+pub fn console_init() {
+    unsafe {
+        let writer = &mut *core::ptr::addr_of_mut!(CONSOLE_WRITER);
+        writer.clear();
+        writer.write_bytes(b"SafirOS Rust Kernel\n");
+        writer.write_bytes(b"Kernel Core: OK\n");
+    }
+}
+
+pub fn console_write_bytes(bytes: &[u8]) {
+    unsafe {
+        let writer = &mut *core::ptr::addr_of_mut!(CONSOLE_WRITER);
+        writer.write_bytes(bytes);
+    }
+}
+
+pub fn console_write_byte(byte: u8) {
+    unsafe {
+        let writer = &mut *core::ptr::addr_of_mut!(CONSOLE_WRITER);
+        writer.write_byte(byte);
     }
 }
