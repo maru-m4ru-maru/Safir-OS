@@ -249,6 +249,6 @@ jobs:
           trace="$(tr -d "\n" < build/debugcon.log)"
           preemption_trace="${trace//K/}"
 
-          test "$trace" = "PICHSJRKTBTATBTATBTATBTAQ"
+          test "$trace" = "PICHSJRKVTBTATBTATBTATBTAQ"
           test "$preemption_trace" = "PICHSJRTBTATBTATBTATBTAQ"
           test "$(tr -cd "K" < build/debugcon.log | wc -c)" -eq 1
