@@ -203,12 +203,36 @@ jobs:
               sock.close()
               raise SystemExit("preemption bootstrap marker R was not observed")
 
-          sock.sendall(b"sendkey a\n")
-          try:
-              sock.recv(4096)
-          except OSError:
-              pass
+          def read_trace():
+              try:
+                  with open("build/debugcon.log", "rb") as log:
+                      return log.read()
+              except FileNotFoundError:
+                  return b""
+
+          key_received = False
+          for attempt in range(3):
+              sock.sendall(b"sendkey a 250\\n")
+              deadline = time.time() + 1.0
+              while time.time() < deadline:
+                  trace = read_trace()
+                  if b"K" in trace:
+                      key_received = True
+                      break
+                  if b"F" in trace or b"Q" in trace:
+                      break
+                  time.sleep(0.005)
+
+              if key_received:
+                  break
+
+              if b"F" in read_trace() or b"Q" in read_trace():
+                  break
+
           sock.close()
+
+          if not key_received:
+              raise SystemExit("QEMU keyboard input was not observed after 3 attempts")
           PY
 
           wait "$qemu_pid"
