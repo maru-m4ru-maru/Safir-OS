@@ -68,6 +68,8 @@ const TASK_B_STACK_BOTTOM: usize = 0x00064000;
 const TASK_B_STACK_TOP: usize = 0x00067FF8;
 const TASK_BOOTSTRAP_BIT: usize = 1usize << 63;
 #[cfg(not(feature = "host-test"))]
+const KEYBOARD_TEST_SEEN_SLOT: usize = 0x0005F018;
+#[cfg(not(feature = "host-test"))]
 const TRACE_TICKS: u64 = 8;
 
 #[repr(C)]
@@ -275,17 +277,42 @@ pub unsafe fn init_preemption(test_mode: u64) -> ! {
         safiros_preemptive_start as *const () as usize as u64,
     );
 
+    core::ptr::write_volatile(
+        KEYBOARD_TEST_SEEN_SLOT as *mut u8,
+        0,
+    );
+
     unsafe {
         asm!(
             "out dx, al",
             in("dx") 0x21u16,
-            in("al") 0xFEu8,
+            in("al") if runtime.trace_enabled { 0xFDu8 } else { 0xFEu8 },
             options(nomem, nostack, preserves_flags)
         );
     }
 
     if runtime.trace_enabled {
         debugcon(b'R');
+
+        unsafe {
+            asm!("sti", options(nomem, nostack));
+        }
+
+        while core::ptr::read_volatile(KEYBOARD_TEST_SEEN_SLOT as *const u8) == 0 {
+            unsafe {
+                asm!("hlt", options(nomem, nostack, preserves_flags));
+            }
+        }
+
+        unsafe {
+            asm!("cli", options(nomem, nostack));
+            asm!(
+                "out dx, al",
+                in("dx") 0x21u16,
+                in("al") 0xFCu8,
+                options(nomem, nostack, preserves_flags)
+            );
+        }
     }
 
     safiros_preemptive_start(frame_a as *mut InterruptContext)
