@@ -250,14 +250,12 @@ jobs:
           preemption_trace="${trace//K/}"
           preemption_trace="${preemption_trace//V/}"
 
-          test "${trace:0:7}" = "PICHSJR"
-          test "${trace: -1}" = "Q"
           test "$(tr -cd "K" < build/debugcon.log | wc -c)" -eq 1
           test "$(tr -cd "V" < build/debugcon.log | wc -c)" -eq 1
           case "$trace" in
-            *K*V*) ;;
+            PICHSJR*K*V*Q) ;;
             *)
-              echo "Keyboard input was not consumed by Task A in time"
+              echo "Keyboard input path did not complete: $trace"
               exit 1
               ;;
           esac
