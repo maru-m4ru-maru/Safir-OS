@@ -126,8 +126,8 @@ jobs:
       - name: Validate binaries
         run: |
           test "$(stat -c%s build/boot.bin)" -eq 512
-          test "$(stat -c%s build/kernel.bin)" -eq 17920
-          test "$(stat -c%s build/kernel-qemu.bin)" -eq 17920
+          test "$(stat -c%s build/kernel.bin)" -eq 32768
+          test "$(stat -c%s build/kernel-qemu.bin)" -eq 32768
           test "$(od -An -tx1 -j510 -N2 build/boot.bin | tr -d ' \n')" = "55aa"
 
       - name: Create disk image
