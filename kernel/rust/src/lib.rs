@@ -55,22 +55,21 @@ pub extern "C" fn rust_main(e820_ptr: u64, e820_len: usize, test_mode: u64) {
     physical_memory.reserve_range(0x00090000, 0x3000);
     physical_memory.reserve_range(0x000B8000, 0x1000);
 
-    let mut writer = vga::Writer::new();
-    writer.clear();
-    writer.write_bytes(b"SafirOS Rust Kernel\n");
-    writer.write_bytes(b"Kernel Core: OK\n");
+    vga::console_init();
 
     if memory_map.is_empty() {
-        writer.write_bytes(b"Memory Map: EMPTY\n");
+        vga::console_write_bytes(b"Memory Map: EMPTY\n");
     } else {
-        writer.write_bytes(b"Memory Map: OK\n");
+        vga::console_write_bytes(b"Memory Map: OK\n");
     }
 
     if physical_memory.free_frames() > 0 {
-        writer.write_bytes(b"Physical Memory: OK");
+        vga::console_write_bytes(b"Physical Memory: OK\n");
     } else {
-        writer.write_bytes(b"Physical Memory: EMPTY");
+        vga::console_write_bytes(b"Physical Memory: EMPTY\n");
     }
+
+    vga::console_write_bytes(b"Input: ");
 
     #[cfg(not(feature = "host-test"))]
     unsafe {
