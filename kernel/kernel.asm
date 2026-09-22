@@ -17,6 +17,7 @@ org 0x0000
 %define PREEMPT_HOOK_SLOT 0x0005F000
 %define PREEMPT_STACK_TOP 0x0006F000
 %define PREEMPT_BOOTSTRAP_SLOT 0x0005F008
+%define KEYBOARD_HOOK_SLOT 0x0005F010
 
 %define PIT_FREQUENCY   100
 %define PIT_DIVISOR     11931
@@ -208,6 +209,19 @@ long_mode_start:
     mov dword [rdi + 8], eax
     mov dword [rdi + 12], 0
 
+    ; Override IRQ1 vector 0x21 with the PS/2 keyboard handler.
+    mov rdi, IDT_BASE + (0x21 * 16)
+    mov rax, KERNEL_BASE + keyboard_interrupt
+    mov word [rdi + 0], ax
+    mov word [rdi + 2], 0x18
+    mov byte [rdi + 4], 0
+    mov byte [rdi + 5], 0x8E
+    shr rax, 16
+    mov word [rdi + 6], ax
+    shr rax, 16
+    mov dword [rdi + 8], eax
+    mov dword [rdi + 12], 0
+
     lidt [KERNEL_BASE + idtr]
 
 %ifdef SAFIROS_QEMU_TEST
@@ -237,8 +251,11 @@ long_mode_start:
     out 0x21, al
     out 0xA1, al
 
-    mov al, 0xFF
+    ; Unmask IRQ0 (PIT) and IRQ1 (PS/2 keyboard).
+    mov al, 0xFC
     out 0x21, al
+
+    mov al, 0xFF
     out 0xA1, al
 
 %ifdef SAFIROS_QEMU_TEST
@@ -325,6 +342,61 @@ print_hex64:
     rol rdx, 4
     loop .hex_loop
     ret
+
+
+keyboard_interrupt:
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rdi
+    push rsi
+    push rbp
+    push r8
+    push r9
+    push r10
+    push r11
+    push r12
+    push r13
+    push r14
+    push r15
+
+    in al, 0x60
+    movzx edi, al
+    mov rax, [KEYBOARD_HOOK_SLOT]
+    test rax, rax
+    jz .no_hook
+
+    call rax
+    test rax, rax
+    jz .no_key
+
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'K'
+    out 0xE9, al
+%endif
+
+.no_key:
+.no_hook:
+    mov al, 0x20
+    out 0x20, al
+
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rbp
+    pop rsi
+    pop rdi
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+    iretq
 
 
 timer_interrupt:
