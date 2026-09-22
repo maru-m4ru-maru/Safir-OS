@@ -70,6 +70,7 @@ const TASK_A_STACK_TOP: usize = 0x00063FF8;
 const TASK_B_STACK_BOTTOM: usize = 0x00064000;
 const TASK_B_STACK_TOP: usize = 0x00067FF8;
 const TASK_BOOTSTRAP_BIT: usize = 1usize << 63;
+// Reserve space for task-local variables before the initial context frame.
 const TASK_INITIAL_STACK_RESERVE: usize = 0x1000;
 #[cfg(not(feature = "host-test"))]
 const KEYBOARD_TEST_SEEN_SLOT: usize = 0x0005F018;
@@ -227,6 +228,7 @@ fn qemu_exit(code: u8) {
 
 #[cfg(not(feature = "host-test"))]
 unsafe fn task_frame(stack_top: usize, rip: usize) -> usize {
+    // Keep the task's local stack space separate from its saved context.
     let frame = stack_top
         - TASK_INITIAL_STACK_RESERVE
         - core::mem::size_of::<InterruptContext>();
@@ -269,7 +271,7 @@ fn run_shell_command(command: crate::shell::Command<'_>) {
 pub extern "C" fn preempt_task_a() -> ! {
     let mut shell = crate::shell::Shell::new();
 
-    crate::vga::console_write_bytes(b"safiros> ");
+    crate::vga::console_write_bytes(crate::shell::PROMPT);
 
     unsafe {
         asm!("sti", options(nomem, nostack));
@@ -289,7 +291,7 @@ pub extern "C" fn preempt_task_a() -> ! {
                     let command = shell.command();
                     run_shell_command(command);
                     shell.clear();
-                    crate::vga::console_write_bytes(b"safiros> ");
+                    crate::vga::console_write_bytes(crate::shell::PROMPT);
                 }
                 crate::shell::InputAction::Nothing => {}
                 crate::shell::InputAction::Overflow => {
