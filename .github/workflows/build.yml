@@ -147,16 +147,52 @@ jobs:
         shell: bash
         run: |
           set +e
+          rm -f build/qemu-monitor.sock build/debugcon.log
+
           timeout 12s qemu-system-x86_64 \
             -drive file=build/SafirOS-qemu.img,format=raw,if=floppy \
             -display none \
-            -monitor none \
+            -monitor unix:build/qemu-monitor.sock,server=on,wait=off \
             -serial none \
             -no-reboot \
             -no-shutdown \
             -debugcon file:build/debugcon.log \
             -global isa-debugcon.iobase=0xe9 \
-            -device isa-debug-exit,iobase=0xf4,iosize=0x01
+            -device isa-debug-exit,iobase=0xf4,iosize=0x01 &
+
+          qemu_pid=$!
+
+          python3 - <<'PY'
+          import socket
+          import time
+
+          path = "build/qemu-monitor.sock"
+          for _ in range(200):
+              try:
+                  sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                  sock.connect(path)
+                  break
+              except OSError:
+                  try:
+                      sock.close()
+                  except OSError:
+                      pass
+                  time.sleep(0.02)
+          else:
+              raise SystemExit("QEMU monitor socket was not available")
+
+          sock.settimeout(1.0)
+          try:
+              sock.recv(4096)
+          except OSError:
+              pass
+
+          sock.sendall(b"sendkey a\n")
+          time.sleep(0.02)
+          sock.close()
+          PY
+
+          wait "$qemu_pid"
           rc=$?
           set -e
 
@@ -166,4 +202,9 @@ jobs:
 
           test "$rc" -eq 33
           test -f build/debugcon.log
-          test "$(tr -d "\n" < build/debugcon.log)" = "PICHSJRTBTATBTATBTATBTAQ"
+
+          trace="$(tr -d "\n" < build/debugcon.log)"
+          preemption_trace="${trace//K/}"
+
+          test "$preemption_trace" = "PICHSJRTBTATBTATBTATBTAQ"
+          test "$(tr -cd "K" < build/debugcon.log | wc -c)" -eq 1
