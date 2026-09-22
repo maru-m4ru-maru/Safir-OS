@@ -212,7 +212,7 @@ jobs:
 
           key_received = False
           for attempt in range(3):
-              sock.sendall(b"sendkey a 250\\n")
+              sock.sendall(b"sendkey a 250\n")
               deadline = time.time() + 1.0
               while time.time() < deadline:
                   trace = read_trace()
