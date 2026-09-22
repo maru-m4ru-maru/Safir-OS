@@ -1,10 +1,10 @@
 use core::arch::asm;
 
 #[cfg(not(feature = "host-test"))]
-use core::sync::atomic::{AtomicBool, Ordering};
+use core::arch::global_asm;
 
 #[cfg(not(feature = "host-test"))]
-use core::arch::global_asm;
+use core::sync::atomic::{AtomicBool, Ordering};
 
 use crate::{CpuContext, Scheduler, Task, TaskState};
 
@@ -56,10 +56,10 @@ impl InterruptContext {
     }
 
     pub const fn is_valid(self) -> bool {
-        self.rip != 0 &&
-        self.cs == 0x18 &&
-        (self.rflags & 0x2) != 0 &&
-        (self.rflags & 0x200) != 0
+        self.rip != 0
+            && self.cs == 0x18
+            && (self.rflags & 0x2) != 0
+            && (self.rflags & 0x200) != 0
     }
 }
 
@@ -375,11 +375,9 @@ pub unsafe extern "C" fn preempt_timer_tick(ctx: *mut InterruptContext) -> *mut 
 
     runtime.frames[current] = current_frame;
 
-
     let Some(next_id) = runtime.scheduler.next() else {
         return ctx;
     };
-
 
     let next = if next_id == TASK_A_ID {
         0
@@ -389,11 +387,11 @@ pub unsafe extern "C" fn preempt_timer_tick(ctx: *mut InterruptContext) -> *mut 
         return ctx;
     };
 
-
     if next != current {
         if !runtime.tasks[current].transition(TaskState::Ready) {
             return ctx;
         }
+
         if !runtime.tasks[next].transition(TaskState::Running) {
             let _ = runtime.tasks[current].transition(TaskState::Running);
             return ctx;
@@ -402,29 +400,26 @@ pub unsafe extern "C" fn preempt_timer_tick(ctx: *mut InterruptContext) -> *mut 
         return ctx;
     }
 
-
     #[cfg(not(feature = "host-test"))]
     if runtime.trace_enabled {
         runtime.trace_ticks += 1;
         debugcon(if next == 0 { b'A' } else { b'B' });
+
         if runtime.trace_ticks >= TRACE_TICKS {
             debugcon(b'Q');
             qemu_exit(0x10);
         }
     }
 
-
     let mut next_frame = runtime.frames[next];
     if next_frame == 0 || (next_frame & 7) != 0 {
         return ctx;
     }
 
-
     if !runtime.started[next] {
         runtime.started[next] = true;
         next_frame |= TASK_BOOTSTRAP_BIT;
     }
-
 
     next_frame as *mut InterruptContext
 }
