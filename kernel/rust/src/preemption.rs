@@ -222,19 +222,76 @@ unsafe fn task_frame(stack_top: usize, rip: usize) -> usize {
     frame
 }
 
+fn run_shell_command(command: crate::shell::Command<'_>) {
+    match command {
+        crate::shell::Command::Empty => {}
+        crate::shell::Command::Help => {
+            crate::vga::console_write_bytes(
+                b"Commands: help clear about echo\n",
+            );
+        }
+        crate::shell::Command::Clear => {
+            crate::vga::console_clear();
+        }
+        crate::shell::Command::About => {
+            crate::vga::console_write_bytes(
+                b"SafirOS x86-64 educational kernel\n",
+            );
+        }
+        crate::shell::Command::Echo(text) => {
+            crate::vga::console_write_bytes(text);
+            crate::vga::console_write_byte(b'\n');
+        }
+        crate::shell::Command::Unknown(command) => {
+            crate::vga::console_write_bytes(b"Unknown command: ");
+            crate::vga::console_write_bytes(command);
+            crate::vga::console_write_byte(b'\n');
+        }
+    }
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn preempt_task_a() -> ! {
+    let mut shell = crate::shell::Shell::new();
+
+    crate::vga::console_write_byte(b' ');
+    crate::vga::console_write_bytes(b"safiros> ");
+
     unsafe {
         asm!("sti", options(nomem, nostack));
     }
+
     loop {
         if let Some(byte) = crate::keyboard::pop_byte() {
-            crate::vga::console_write_byte(byte);
+            match shell.feed_byte(byte) {
+                crate::shell::InputAction::Character(byte) => {
+                    crate::vga::console_write_byte(byte);
+                }
+                crate::shell::InputAction::Backspace => {
+                    crate::vga::console_write_byte(0x08);
+                }
+                crate::shell::InputAction::Submit => {
+                    crate::vga::console_write_byte(b'\n');
+                    let command = shell.command();
+                    run_shell_command(command);
+                    shell.clear();
+                    crate::vga::console_write_bytes(b"safiros> ");
+                }
+                crate::shell::InputAction::Nothing => {}
+                crate::shell::InputAction::Overflow => {
+                    crate::vga::console_write_bytes(
+                        b"\nLine too long\nsafiros> ",
+                    );
+                    shell.clear();
+                }
+            }
+
             #[cfg(not(feature = "host-test"))]
             if TRACE_ENABLED.load(Ordering::Relaxed) {
                 debugcon(b'V');
             }
         }
+
         unsafe {
             asm!("hlt", options(nomem, nostack, preserves_flags));
         }
