@@ -70,6 +70,7 @@ const TASK_A_STACK_TOP: usize = 0x00063FF8;
 const TASK_B_STACK_BOTTOM: usize = 0x00064000;
 const TASK_B_STACK_TOP: usize = 0x00067FF8;
 const TASK_BOOTSTRAP_BIT: usize = 1usize << 63;
+const TASK_INITIAL_STACK_RESERVE: usize = 0x1000;
 #[cfg(not(feature = "host-test"))]
 const KEYBOARD_TEST_SEEN_SLOT: usize = 0x0005F018;
 #[cfg(not(feature = "host-test"))]
@@ -93,8 +94,20 @@ impl RuntimeState {
         Self {
             scheduler: Scheduler::new(),
             tasks: [
-                Task::new(1, CpuContext::new(TASK_A_STACK_TOP as u64, 1)),
-                Task::new(2, CpuContext::new(TASK_B_STACK_TOP as u64, 1)),
+                Task::new(
+                    1,
+                    CpuContext::new(
+                        (TASK_A_STACK_TOP - TASK_INITIAL_STACK_RESERVE) as u64,
+                        1,
+                    ),
+                ),
+                Task::new(
+                    2,
+                    CpuContext::new(
+                        (TASK_B_STACK_TOP - TASK_INITIAL_STACK_RESERVE) as u64,
+                        1,
+                    ),
+                ),
             ],
             frames: [0, 0],
             started: [false, false],
@@ -214,7 +227,9 @@ fn qemu_exit(code: u8) {
 
 #[cfg(not(feature = "host-test"))]
 unsafe fn task_frame(stack_top: usize, rip: usize) -> usize {
-    let frame = stack_top - core::mem::size_of::<InterruptContext>();
+    let frame = stack_top
+        - TASK_INITIAL_STACK_RESERVE
+        - core::mem::size_of::<InterruptContext>();
     core::ptr::write(
         frame as *mut InterruptContext,
         InterruptContext::new(rip as u64, 0x18, 0x202),
@@ -327,11 +342,17 @@ pub unsafe fn init_preemption(test_mode: u64) -> ! {
 
     runtime.tasks[0] = Task::new(
         TASK_A_ID,
-        CpuContext::new(TASK_A_STACK_TOP as u64, preempt_task_a as *const () as usize as u64),
+        CpuContext::new(
+            (TASK_A_STACK_TOP - TASK_INITIAL_STACK_RESERVE) as u64,
+            preempt_task_a as *const () as usize as u64,
+        ),
     );
     runtime.tasks[1] = Task::new(
         TASK_B_ID,
-        CpuContext::new(TASK_B_STACK_TOP as u64, preempt_task_b as *const () as usize as u64),
+        CpuContext::new(
+            (TASK_B_STACK_TOP - TASK_INITIAL_STACK_RESERVE) as u64,
+            preempt_task_b as *const () as usize as u64,
+        ),
     );
     assert!(runtime.tasks[0].transition(TaskState::Running));
 
