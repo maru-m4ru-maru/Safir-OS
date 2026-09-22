@@ -101,7 +101,8 @@ static mut CONSOLE_WRITER: Writer = Writer::new();
 pub fn console_init() {
     unsafe {
         let writer = &mut *core::ptr::addr_of_mut!(CONSOLE_WRITER);
-        writer.clear();
+        writer.row = 6;
+        writer.column = 0;
         writer.write_bytes(b"SafirOS Rust Kernel\n");
         writer.write_bytes(b"Kernel Core: OK\n");
     }
