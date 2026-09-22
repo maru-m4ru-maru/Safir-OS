@@ -254,7 +254,6 @@ fn run_shell_command(command: crate::shell::Command<'_>) {
 pub extern "C" fn preempt_task_a() -> ! {
     let mut shell = crate::shell::Shell::new();
 
-    crate::vga::console_write_byte(b' ');
     crate::vga::console_write_bytes(b"safiros> ");
 
     unsafe {
