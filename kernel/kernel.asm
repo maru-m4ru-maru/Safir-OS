@@ -18,6 +18,7 @@ org 0x0000
 %define PREEMPT_STACK_TOP 0x0006F000
 %define PREEMPT_BOOTSTRAP_SLOT 0x0005F008
 %define KEYBOARD_HOOK_SLOT 0x0005F010
+%define KEYBOARD_TEST_SEEN_SLOT 0x0005F018
 
 %define PIT_FREQUENCY   100
 %define PIT_DIVISOR     11931
@@ -374,6 +375,7 @@ keyboard_interrupt:
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'K'
     out 0xE9, al
+    mov byte [KEYBOARD_TEST_SEEN_SLOT], 1
 %endif
 
 .no_key:
