@@ -4,64 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SafirOS</title>
-<link rel="icon" href="favicon.svg?v=8" type="image/svg+xml">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/v86@0.5.458/build/libv86.js"></script>
 </head>
 <body>
 <div id="boot_screen">
-  <div class="boot_inner">
-    <img class="safiros_logo" src="safiros-logo.svg" alt="SafirOS">
-    <pre id="status">SYSTEM BOOT
-SafirOSを起動しています...</pre>
-    <div class="progress"><div id="progress_bar"></div></div>
-    <div id="progress_text">0%</div>
-  </div>
+  <img class="safiros_logo" src="safiros-logo.svg" alt="SafirOS">
+  <div id="status">SafirOSを起動しています...</div>
+  <div class="progress"><div id="progress_bar"></div></div>
 </div>
-
-<div id="os_screen">
-  <div id="screen_container" aria-label="SafirOS display"></div>
-
-  <div id="taskbar">
-    <button id="btn-start">SAFIR</button>
-    <button id="btn-files">FILE</button>
-    <button id="btn-exe">EXE</button>
-    <button id="btn-browser">WEB</button>
-    <button id="btn-fullscreen">FULL</button>
-    <span id="clock"></span>
-  </div>
-
-  <div id="start_menu" hidden>
-    <div class="menu_title">SAFIR-OS</div>
-    <button data-action="files">File Manager</button>
-    <button data-action="exe">EXE Runner</button>
-    <button data-action="browser">Web Browser</button>
-    <button data-action="about">About</button>
-  </div>
-
-  <div id="files_window" class="window" hidden>
-    <div class="window_title">FILE MANAGER</div>
-    <div class="window_body">
-      <input id="file_picker" type="file" multiple>
-      <button id="file_import">IMPORT</button>
-      <button id="file_export_all">DOWNLOAD ALL</button>
-      <button id="file_clear">CLEAR</button>
-      <div class="hint">Files are kept in this browser using IndexedDB.</div>
-      <pre id="file_list">(empty)</pre>
-    </div>
-  </div>
-
-  <div id="about_window" class="window" hidden>
-    <div class="window_title">ABOUT SAFIR-OS</div>
-    <div class="window_body">
-      <p>SafirOS WebPC</p>
-      <p>Browser-native OS shell.</p>
-      <p>CPU: v86</p>
-      <p>EXE: Boxedwine</p>
-      <button data-close="about_window">CLOSE</button>
-    </div>
-  </div>
-</div>
+<div id="screen_container" aria-label="SafirOS"></div>
 <script src="app.js"></script>
 </body>
 </html>
