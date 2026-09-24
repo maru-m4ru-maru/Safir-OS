@@ -255,7 +255,7 @@ jobs:
 
           test "$(tr -cd "K" < build/debugcon.log | wc -c)" -eq 1
           test "$(tr -cd "V" < build/debugcon.log | wc -c)" -eq 1
-          case "$trace" in
+          case "$boot_trace" in
             PICHSJR*K*V*Q) ;;
             *)
               echo "Keyboard input path did not complete: $trace"
