@@ -1,5 +1,5 @@
 bits 16
-org 0x0000
+org 0x7C00
 
 %define KERNEL_LOAD_SEGMENT 0x1000
 %define KERNEL_SECTORS 64
