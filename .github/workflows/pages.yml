@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -50,6 +50,12 @@ jobs:
           dd if=build/boot.bin of=site/SafirOS.img bs=512 seek=0 conv=notrunc status=none
           dd if=build/kernel.bin of=site/SafirOS.img bs=512 seek=1 conv=notrunc status=none
           test "$(stat -c%s site/SafirOS.img)" -eq 1474560
+          cp site/SafirOS.img web/SafirOS.img
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/SafirOS.img
+          git diff --cached --quiet || git commit -m "Update generated SafirOS disk image [skip ci]"
+          git diff --cached --quiet || git push
 
       - name: Copy website
         run: |
