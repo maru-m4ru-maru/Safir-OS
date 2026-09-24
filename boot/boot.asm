@@ -23,6 +23,11 @@ start:
     mov byte [current_head], 0
     mov byte [current_cylinder], 0
 
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'B'
+    out 0xE9, al
+%endif
+
 .read_kernel:
     mov ah, 0x02
     mov al, 0x01
@@ -35,6 +40,30 @@ start:
 
     add bx, 512
     dec si
+
+%ifdef SAFIROS_QEMU_TEST
+    cmp si, 48
+    jne .check_second_marker
+    mov al, '1'
+    out 0xE9, al
+.check_second_marker:
+    cmp si, 32
+    jne .check_third_marker
+    mov al, '2'
+    out 0xE9, al
+.check_third_marker:
+    cmp si, 16
+    jne .check_final_marker
+    mov al, '3'
+    out 0xE9, al
+.check_final_marker:
+    cmp si, 0
+    jne .after_markers
+    mov al, '4'
+    out 0xE9, al
+.after_markers:
+%endif
+
     jz kernel_loaded
 
     inc byte [current_sector]
@@ -57,6 +86,10 @@ kernel_loaded:
     jmp KERNEL_LOAD_SEGMENT:0x0000
 
 disk_error:
+%ifdef SAFIROS_QEMU_TEST
+    mov al, 'D'
+    out 0xE9, al
+%endif
     mov ax, 0x0003
     int 0x10
     mov si, error_message
