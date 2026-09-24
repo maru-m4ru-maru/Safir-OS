@@ -24,6 +24,8 @@ jobs:
         run: |
           mkdir -p build
           nasm -f bin boot/boot.asm -o build/boot.bin
+          nasm -dSAFIROS_QEMU_TEST -f bin boot/boot.asm -o build/boot-qemu.bin
+          test "$(stat -c%s build/boot-qemu.bin)" -eq 512
 
       - name: Test Rust kernel logic
         run: |
@@ -140,7 +142,7 @@ jobs:
       - name: Create QEMU disk image
         run: |
           dd if=/dev/zero of=build/SafirOS-qemu.img bs=512 count=2880 status=none
-          dd if=build/boot.bin of=build/SafirOS-qemu.img bs=512 seek=0 conv=notrunc status=none
+          dd if=build/boot-qemu.bin of=build/SafirOS-qemu.img bs=512 seek=0 conv=notrunc status=none
           dd if=build/kernel-qemu.bin of=build/SafirOS-qemu.img bs=512 seek=1 conv=notrunc status=none
 
       - name: Boot Rust kernel, Long Mode and PIT under QEMU
