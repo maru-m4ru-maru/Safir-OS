@@ -249,7 +249,8 @@ jobs:
           test -f build/debugcon.log
 
           trace="$(tr -d "\n" < build/debugcon.log)"
-          preemption_trace="${trace//K/}"
+          boot_trace="${trace#B1234}"
+          preemption_trace="${boot_trace//K/}"
           preemption_trace="${preemption_trace//V/}"
 
           test "$(tr -cd "K" < build/debugcon.log | wc -c)" -eq 1
