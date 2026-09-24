@@ -36,11 +36,13 @@ build_kernel() {
         nasm -f bin kernel/kernel.asm -o build/kernel-stage.bin
     fi
 
-    test "$(stat -c%s build/kernel-stage.bin)" -le 4096
+    KERNEL_STAGE_SIZE="$(stat -c%s build/kernel-stage.bin)"
+    test "$KERNEL_STAGE_SIZE" -le 4096
 
     dd if=/dev/zero of="$output" bs=512 count="$KERNEL_SECTORS" status=none
     dd if=build/kernel-stage.bin of="$output" bs=1 seek=0 conv=notrunc status=none
     dd if=build/rust.bin of="$output" bs=1 seek="$RUST_LOAD_OFFSET" conv=notrunc status=none
+    cmp -n "$KERNEL_STAGE_SIZE" build/kernel-stage.bin "$output"
     test "$(stat -c%s "$output")" -eq "$KERNEL_SIZE"
 }
 
