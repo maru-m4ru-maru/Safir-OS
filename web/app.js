@@ -24,17 +24,41 @@ function setProgress(value){
 
 function waitForLongMode(emulator){
   const expected="SafirOS 64-bit Long Mode";
+  const signature=Array.from(expected,chr=>chr.charCodeAt(0));
   const deadline=performance.now()+30000;
 
   return new Promise((resolve,reject)=>{
     const check=()=>{
-      if(emulator.screen_adapter&&typeof emulator.screen_adapter.get_text_screen==="function"){
-        const lines=emulator.screen_adapter.get_text_screen();
+      try{
+        if(typeof emulator.read_memory==="function"){
+          const memory=emulator.read_memory(0xB8000,80*25*2);
 
-        if(lines.some(line=>line.includes(expected))){
-          resolve();
-          return;
+          for(let offset=0;offset+signature.length*2<=memory.length;offset+=2){
+            let match=true;
+
+            for(let i=0;i<signature.length;i++){
+              if(memory[offset+i*2]!==signature[i]){
+                match=false;
+                break;
+              }
+            }
+
+            if(match){
+              resolve();
+              return;
+            }
+          }
         }
+
+        if(emulator.screen_adapter&&typeof emulator.screen_adapter.get_text_screen==="function"){
+          const lines=emulator.screen_adapter.get_text_screen();
+
+          if(lines.some(line=>line.includes(expected))){
+            resolve();
+            return;
+          }
+        }
+      }catch(error){
       }
 
       if(performance.now()>=deadline){
