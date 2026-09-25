@@ -5,6 +5,13 @@ const screenContainer=document.getElementById("screen_container");
 const progressBar=document.getElementById("progress_bar");
 const bootScreen=document.getElementById("boot_screen");
 
+window.addEventListener("keydown",event=>{
+  if(event.ctrlKey&&event.shiftKey&&event.code==="KeyR"){
+    event.preventDefault();
+    window.location.reload();
+  }
+},true);
+
 function setStatus(message){
   status.textContent=message;
 }
@@ -23,7 +30,10 @@ async function boot(){
       wasm_path:"https://cdn.jsdelivr.net/npm/v86@0.5.458/build/v86.wasm",
       memory_size:16*1024*1024,
       vga_memory_size:2*1024*1024,
-      screen_container:screenContainer,
+      screen:{
+        container:screenContainer,
+        use_graphical_text:true
+      },
       bios:{
         url:"https://raw.githubusercontent.com/copy/v86/master/bios/seabios.bin"
       },
@@ -36,6 +46,12 @@ async function boot(){
       boot_order:0x321,
       disable_speaker:true,
       autostart:true
+    });
+
+    screenContainer.addEventListener("mousedown",()=>{
+      if(window.emulator){
+        window.emulator.keyboard_set_enabled(true);
+      }
     });
 
     window.emulator.add_listener("download-progress",event=>{
