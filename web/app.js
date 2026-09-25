@@ -79,7 +79,7 @@ async function boot(){
     setProgress(5);
 
     window.emulator=new V86({
-      wasm_path:"https://cdn.jsdelivr.net/npm/v86@0.5.458/build/v86.wasm",
+      wasm_path:"https://cdn.jsdelivr.net/npm/v86@0.5.462/build/v86.wasm",
       memory_size:32*1024*1024,
       vga_memory_size:2*1024*1024,
       screen_container:screenContainer,
