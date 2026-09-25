@@ -8,7 +8,8 @@ const bootScreen=document.getElementById("boot_screen");
 window.addEventListener("keydown",event=>{
   if(event.ctrlKey&&event.shiftKey&&event.code==="KeyR"){
     event.preventDefault();
-    window.location.reload();
+    event.stopImmediatePropagation();
+    window.location.href=window.location.pathname+"?reload="+Date.now();
   }
 },true);
 
@@ -21,6 +22,45 @@ function setProgress(value){
   progressBar.style.width=progress+"%";
 }
 
+function createVgaTextWatcher(emulator){
+  const rows=Array.from({length:25},()=>Array(80).fill(" "));
+  let resolved=false;
+
+  return new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>{
+      if(!resolved){
+        resolved=true;
+        reject(new Error("SafirOSのLong Mode画面を確認できませんでした"));
+      }
+    },15000);
+
+    emulator.add_listener("screen-put-char",event=>{
+      if(resolved){
+        return;
+      }
+
+      const row=event[0];
+      const col=event[1];
+      const chr=event[2];
+
+      if(row<0||row>=25||col<0||col>=80){
+        return;
+      }
+
+      rows[row][col]=String.fromCharCode(chr);
+
+      for(const line of rows){
+        if(line.join("").includes("SafirOS 64-bit Long Mode")){
+          resolved=true;
+          clearTimeout(timer);
+          resolve();
+          return;
+        }
+      }
+    });
+  });
+}
+
 async function boot(){
   try{
     setStatus("Safir OSを起動しています...");
@@ -30,10 +70,7 @@ async function boot(){
       wasm_path:"https://cdn.jsdelivr.net/npm/v86@0.5.458/build/v86.wasm",
       memory_size:16*1024*1024,
       vga_memory_size:2*1024*1024,
-      screen:{
-        container:screenContainer,
-        use_graphical_text:true
-      },
+      screen_container:screenContainer,
       bios:{
         url:"https://raw.githubusercontent.com/copy/v86/master/bios/seabios.bin"
       },
@@ -47,6 +84,8 @@ async function boot(){
       disable_speaker:true,
       autostart:true
     });
+
+    window.emulator.keyboard_set_enabled(true);
 
     screenContainer.addEventListener("mousedown",()=>{
       if(window.emulator){
@@ -62,35 +101,7 @@ async function boot(){
 
     setProgress(15);
 
-    await new Promise((resolve,reject)=>{
-      const start=Date.now();
-
-      const check=()=>{
-        if(window.emulator.screen_adapter){
-          resolve();
-          return;
-        }
-
-        if(Date.now()-start>=15000){
-          reject(new Error("v86の画面アダプター初期化がタイムアウトしました"));
-          return;
-        }
-
-        setTimeout(check,100);
-      };
-
-      check();
-    });
-
-    setProgress(25);
-
-    const screenReady=await window.emulator.wait_until_vga_screen_contains("SafirOS 64-bit Long Mode",{
-      timeout_msec:15000
-    });
-
-    if(!screenReady){
-      throw new Error("SafirOSのLong Mode画面を確認できませんでした");
-    }
+    await createVgaTextWatcher(window.emulator);
 
     setProgress(100);
     setStatus("Safir OS 起動完了");
