@@ -22,42 +22,30 @@ function setProgress(value){
   progressBar.style.width=progress+"%";
 }
 
-function createVgaTextWatcher(emulator){
-  const rows=Array.from({length:25},()=>Array(80).fill(" "));
-  let resolved=false;
+function waitForLongMode(emulator){
+  const expected="SafirOS 64-bit Long Mode";
+  const deadline=performance.now()+30000;
 
   return new Promise((resolve,reject)=>{
-    const timer=setTimeout(()=>{
-      if(!resolved){
-        resolved=true;
-        reject(new Error("SafirOSのLong Mode画面を確認できませんでした"));
-      }
-    },15000);
+    const check=()=>{
+      if(emulator.screen_adapter&&typeof emulator.screen_adapter.get_text_screen==="function"){
+        const lines=emulator.screen_adapter.get_text_screen();
 
-    emulator.add_listener("screen-put-char",event=>{
-      if(resolved){
-        return;
-      }
-
-      const row=event[0];
-      const col=event[1];
-      const chr=event[2];
-
-      if(row<0||row>=25||col<0||col>=80){
-        return;
-      }
-
-      rows[row][col]=String.fromCharCode(chr);
-
-      for(const line of rows){
-        if(line.join("").includes("SafirOS 64-bit Long Mode")){
-          resolved=true;
-          clearTimeout(timer);
+        if(lines.some(line=>line.includes(expected))){
           resolve();
           return;
         }
       }
-    });
+
+      if(performance.now()>=deadline){
+        reject(new Error("SafirOSのLong Mode画面を確認できませんでした"));
+        return;
+      }
+
+      setTimeout(check,50);
+    };
+
+    check();
   });
 }
 
@@ -94,14 +82,14 @@ async function boot(){
     });
 
     window.emulator.add_listener("download-progress",event=>{
-      if(event.file_name==="SafirOS.img"){
+      if(event.file_name.includes("SafirOS.img")){
         setProgress(event.total ? event.loaded/event.total*90+5 : 50);
       }
     });
 
     setProgress(15);
 
-    await createVgaTextWatcher(window.emulator);
+    await waitForLongMode(window.emulator);
 
     setProgress(100);
     setStatus("Safir OS 起動完了");
@@ -110,7 +98,7 @@ async function boot(){
       bootScreen.remove();
     },500);
   }catch(error){
-    setStatus("Safir OS BOOT FAILED\n"+error.message);
+    setStatus("Safir OS BOOT FAILED\\n"+error.message);
   }
 }
 
