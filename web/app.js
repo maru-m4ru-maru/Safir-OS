@@ -44,6 +44,10 @@ async function boot(){
       }
     });
 
+    await new Promise(resolve=>{
+      window.emulator.add_listener("emulator-ready",resolve);
+    });
+
     await window.emulator.wait_until_vga_screen_contains("SafirOS 64-bit Long Mode",{
       timeout_msec:15000
     });
