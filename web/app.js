@@ -44,13 +44,37 @@ async function boot(){
       }
     });
 
-    await new Promise(resolve=>{
-      window.emulator.add_listener("emulator-ready",resolve);
+    setProgress(15);
+
+    await new Promise((resolve,reject)=>{
+      const start=Date.now();
+
+      const check=()=>{
+        if(window.emulator.screen_adapter){
+          resolve();
+          return;
+        }
+
+        if(Date.now()-start>=15000){
+          reject(new Error("v86の画面アダプター初期化がタイムアウトしました"));
+          return;
+        }
+
+        setTimeout(check,100);
+      };
+
+      check();
     });
 
-    await window.emulator.wait_until_vga_screen_contains("SafirOS 64-bit Long Mode",{
+    setProgress(25);
+
+    const screenReady=await window.emulator.wait_until_vga_screen_contains("SafirOS 64-bit Long Mode",{
       timeout_msec:15000
     });
+
+    if(!screenReady){
+      throw new Error("SafirOSのLong Mode画面を確認できませんでした");
+    }
 
     setProgress(100);
     setStatus("Safir OS 起動完了");
