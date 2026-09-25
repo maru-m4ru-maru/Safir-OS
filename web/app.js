@@ -16,7 +16,7 @@ function setProgress(value){
 
 async function boot(){
   try{
-    setStatus("SafirOSを起動しています...");
+    setStatus("Safir OSを起動しています...");
     setProgress(5);
 
     window.emulator=new V86({
@@ -49,13 +49,13 @@ async function boot(){
     });
 
     setProgress(100);
-    setStatus("SafirOS 起動完了");
+    setStatus("Safir OS 起動完了");
 
     setTimeout(()=>{
       bootScreen.remove();
     },500);
   }catch(error){
-    setStatus("SafirOS BOOT FAILED\n"+error.message);
+    setStatus("Safir OS BOOT FAILED\n"+error.message);
   }
 }
 
