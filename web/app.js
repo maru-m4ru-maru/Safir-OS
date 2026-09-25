@@ -98,7 +98,7 @@ async function boot(){
       bootScreen.remove();
     },500);
   }catch(error){
-    setStatus("Safir OS BOOT FAILED\\n"+error.message);
+    setStatus("Safir OS BOOT FAILED\n"+error.message);
   }
 }
 
