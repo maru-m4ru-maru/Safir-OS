@@ -4,7 +4,6 @@ org 0x0000
 %define KERNEL_BASE     0x00010000
 %define RUST_BASE       0x00011000
 
-; Low-memory scratch regions. All are below 640 KiB.
 %define EARLY_STACK     0x00070000
 %define E820_BASE       0x00006000
 %define E820_MAX_ENTRIES 32
@@ -64,17 +63,14 @@ start:
     mov ax, 0x1000
     mov es, ax
 
-    ; Enable A20 through the Fast A20 gate.
     in al, 0x92
     or al, 00000010b
     out 0x92, al
 
-    ; Enter 32-bit Protected Mode.
     mov eax, cr0
     or eax, 0x00000001
     mov cr0, eax
     jmp dword 0x08:(KERNEL_BASE + protected_mode_start)
-
 
 bits 32
 
@@ -95,56 +91,46 @@ protected_mode_start:
     out 0xE9, al
 %endif
 
-    ; Zero three 4 KiB paging structures.
     mov edi, PML4_BASE
     xor eax, eax
     mov ecx, 3072
     rep stosd
 
-    ; PML4[0] -> PDPT.
     mov dword [PML4_BASE + 0], PDPT_BASE | 0x003
     mov dword [PML4_BASE + 4], 0
 
-    ; PDPT[0] -> PD.
     mov dword [PDPT_BASE + 0], PD_BASE | 0x003
     mov dword [PDPT_BASE + 4], 0
 
-    ; Identity-map the first 1 GiB using 512 x 2 MiB pages.
     mov edi, PD_BASE
     xor ebx, ebx
     mov ecx, 512
 .page_loop:
     mov eax, ebx
-    or eax, 0x00000083       ; Present | RW | PS (2 MiB)
+    or eax, 0x00000083
     mov [edi + 0], eax
     mov dword [edi + 4], 0
     add ebx, 0x00200000
     add edi, 8
     loop .page_loop
 
-    ; CR4.PAE=1 and CR4.PSE=1.
     mov eax, cr4
     or eax, (1 << 5) | (1 << 4)
     mov cr4, eax
 
-    ; CR3 = PML4 physical address.
     mov eax, PML4_BASE
     mov cr3, eax
 
-    ; EFER.LME = 1.
     mov ecx, 0xC0000080
     rdmsr
     or eax, (1 << 8)
     wrmsr
 
-    ; CR0.PG=1 (PE is already set).
     mov eax, cr0
     or eax, (1 << 31)
     mov cr0, eax
 
-    ; Enter 64-bit mode with the long-mode code descriptor.
     jmp dword 0x18:(KERNEL_BASE + long_mode_start)
-
 
 bits 64
 
@@ -161,10 +147,9 @@ long_mode_start:
     mov rsp, EARLY_STACK
     cld
 
-    ; Clear VGA and print the initial 64-bit status.
     mov rdi, VGA_BASE
     mov rcx, 80 * 25
-    mov ax, 0x0720
+    mov ax, 0x0F20
     rep stosw
 
     mov rdi, VGA_BASE
@@ -179,8 +164,6 @@ long_mode_start:
     mov rsi, KERNEL_BASE + msg_pit
     call vga_print
 
-    ; Install a valid gate for every vector so unexpected exceptions
-    ; enter a controlled halt instead of immediately triple-faulting.
     mov rdi, IDT_BASE
     mov rcx, 256
 .fill_idt:
@@ -197,7 +180,6 @@ long_mode_start:
     add rdi, 16
     loop .fill_idt
 
-    ; Override IRQ0 vector 0x20 with the PIT handler.
     mov rdi, IDT_BASE + (0x20 * 16)
     mov rax, KERNEL_BASE + timer_interrupt
     mov word [rdi + 0], ax
@@ -210,7 +192,6 @@ long_mode_start:
     mov dword [rdi + 8], eax
     mov dword [rdi + 12], 0
 
-    ; Override IRQ1 vector 0x21 with the PS/2 keyboard handler.
     mov rdi, IDT_BASE + (0x21 * 16)
     mov rax, KERNEL_BASE + keyboard_interrupt
     mov word [rdi + 0], ax
@@ -230,12 +211,8 @@ long_mode_start:
     out 0xE9, al
 %endif
 
-    ; Initialize the 8042 controller and PS/2 keyboard before enabling IRQ1.
-    ; Force keyboard IRQ1 and Set 1 translation so the decoder receives XT scancodes.
     call ps2_init_keyboard
 
-    ; 8259 PIC remap: IRQ0..7 -> vectors 0x20..0x27,
-    ; IRQ8..15 -> vectors 0x28..0x2F.
     mov al, 0x11
     out 0x20, al
     out 0xA0, al
@@ -256,7 +233,6 @@ long_mode_start:
     out 0x21, al
     out 0xA1, al
 
-    ; Unmask IRQ0 (PIT) and IRQ1 (PS/2 keyboard).
     mov al, 0xFC
     out 0x21, al
 
@@ -268,7 +244,6 @@ long_mode_start:
     out 0xE9, al
 %endif
 
-    ; PIT channel 0, mode 3, binary, ~100 Hz.
     mov al, 0x36
     out 0x43, al
 
@@ -303,36 +278,18 @@ long_mode_start:
     hlt
     jmp .idle
 
-
-; ------------------------------------------------------------
-; VGA text output
-; Input:
-;   RDI = destination in VGA text buffer
-;   RSI = zero-terminated string
-; Clobbers:
-;   RAX
-; ------------------------------------------------------------
 vga_print:
 .next:
     lodsb
     test al, al
     jz .done
-    mov ah, 0x07
+    mov ah, 0x0F
     mov [rdi], ax
     add rdi, 2
     jmp .next
 .done:
     ret
 
-
-; ------------------------------------------------------------
-; Print RAX as 16 hexadecimal digits.
-; Input:
-;   RAX = value
-;   RDI = VGA destination
-; Clobbers:
-;   RAX, RBX, RCX, RDX
-; ------------------------------------------------------------
 print_hex64:
     mov rdx, rax
     mov rbx, KERNEL_BASE + hex_table
@@ -342,19 +299,12 @@ print_hex64:
     shr rax, 60
     mov al, [rbx + rax]
     mov byte [rdi], al
-    mov byte [rdi + 1], 0x07
+    mov byte [rdi + 1], 0x0F
     add rdi, 2
     rol rdx, 4
     loop .hex_loop
     ret
 
-
-
-; ------------------------------------------------------------
-; 8042 / PS/2 keyboard initialization
-; Waits for controller readiness, enables IRQ1 and translation,
-; enables keyboard scanning, and drains command responses.
-; ------------------------------------------------------------
 ps2_wait_input_clear:
 .wait:
     in al, 0x64
@@ -373,14 +323,12 @@ ps2_flush_output:
     ret
 
 ps2_init_keyboard:
-    ; Disable keyboard interface while programming the controller.
     call ps2_wait_input_clear
     mov al, 0xAD
     out 0x64, al
     call ps2_wait_input_clear
     call ps2_flush_output
 
-    ; Read controller configuration byte.
     call ps2_wait_input_clear
     mov al, 0x20
     out 0x64, al
@@ -390,12 +338,10 @@ ps2_init_keyboard:
     test al, 0x01
     jz .read_config_wait
     in al, 0x60
-    ; IRQ1 = bit 0, translation = bit 6, keyboard clock enabled = bit 4 clear.
     or al, 0x41
     and al, 0xEF
     push rax
 
-    ; Write controller configuration byte.
     call ps2_wait_input_clear
     mov al, 0x60
     out 0x64, al
@@ -403,13 +349,10 @@ ps2_init_keyboard:
     pop rax
     out 0x60, al
 
-    ; Re-enable keyboard interface.
     call ps2_wait_input_clear
     mov al, 0xAE
     out 0x64, al
 
-    ; Enable keyboard scanning (0xF4). IRQ1 remains masked in the PIC here,
-    ; so the ACK can be safely drained before normal interrupt handling.
     call ps2_wait_input_clear
     mov al, 0xF4
     out 0x60, al
@@ -464,13 +407,11 @@ keyboard_interrupt:
     pop r8
     pop rbp
     pop rsi
-    pop rdi
     pop rdx
     pop rcx
     pop rbx
     pop rax
     iretq
-
 
 timer_interrupt:
     push rax
@@ -525,13 +466,11 @@ timer_interrupt:
     pop rax
     iretq
 
-
 default_halt:
     cli
 .fault_halt:
     hlt
     jmp .fault_halt
-
 
 default_interrupt:
 %ifdef SAFIROS_QEMU_TEST
@@ -546,22 +485,13 @@ default_interrupt:
     hlt
     jmp .halt
 
-
 align 8
 
 gdt_start:
     dq 0x0000000000000000
-
-    ; 32-bit protected-mode code: base 0, 4 GiB, D=1, G=1.
     dq 0x00CF9A000000FFFF
-
-    ; 32-bit protected-mode data: base 0, 4 GiB, D=1, G=1.
     dq 0x00CF92000000FFFF
-
-    ; 64-bit long-mode code: base 0, L=1, D=0, G=1.
     dq 0x00AF9A000000FFFF
-
-    ; 64-bit data.
     dq 0x00CF92000000FFFF
 
 gdt_end:
