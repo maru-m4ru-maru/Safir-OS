@@ -407,6 +407,7 @@ keyboard_interrupt:
     pop r8
     pop rbp
     pop rsi
+    pop rdi
     pop rdx
     pop rcx
     pop rbx
