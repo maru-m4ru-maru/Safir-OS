@@ -3,7 +3,7 @@ use core::ptr::write_volatile;
 const VGA_BASE: usize = 0xB8000;
 const VGA_WIDTH: usize = 80;
 const VGA_HEIGHT: usize = 25;
-const DEFAULT_ATTRIBUTE: u8 = 0x07;
+const DEFAULT_ATTRIBUTE: u8 = 0x0F;
 const CONSOLE_START_ROW: usize = 6;
 
 pub struct Writer {
