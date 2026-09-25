@@ -48,7 +48,7 @@ body{
   align-items:center;
   justify-content:center;
   gap:18px;
-  background:#fff;
+  background:#000;
 }
 
 .safiros_logo{
@@ -57,14 +57,14 @@ body{
 }
 
 #boot_title{
-  color:#10283d;
+  color:#fff;
   font:700 24px sans-serif;
 }
 
 #status{
   width:min(620px,80vw);
   text-align:center;
-  color:#10283d;
+  color:#fff;
   font:16px monospace;
 }
 
@@ -72,11 +72,11 @@ body{
   width:min(620px,70vw);
   height:8px;
   overflow:hidden;
-  background:#dbe4eb;
+  background:#333;
 }
 
 #progress_bar{
   width:0;
   height:100%;
-  background:#087fc0;
+  background:#fff;
 }
