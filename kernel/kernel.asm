@@ -147,6 +147,8 @@ long_mode_start:
     mov rsp, EARLY_STACK
     cld
 
+    call serial_init
+
     mov rdi, VGA_BASE
     mov rcx, 80 * 25
     mov ax, 0x0F20
@@ -155,21 +157,20 @@ long_mode_start:
     mov rdi, VGA_BASE
     mov rsi, KERNEL_BASE + msg_long_mode
     call vga_print
+    mov rsi, KERNEL_BASE + msg_long_mode
+    call serial_print
 
     mov rdi, VGA_BASE + (80 * 2)
     mov rsi, KERNEL_BASE + msg_idt
     call vga_print
+    mov rsi, KERNEL_BASE + msg_idt
+    call serial_print
 
     mov rdi, VGA_BASE + (80 * 4)
     mov rsi, KERNEL_BASE + msg_pit
     call vga_print
-
-%ifdef SAFIROS_V86_TEST
-    cli
-.v86_test_halt:
-    hlt
-    jmp .v86_test_halt
-%endif
+    mov rsi, KERNEL_BASE + msg_pit
+    call serial_print
 
     mov rdi, IDT_BASE
     mov rcx, 256
@@ -284,6 +285,53 @@ long_mode_start:
 .idle:
     hlt
     jmp .idle
+
+serial_init:
+    mov dx, 0x3F9
+    xor al, al
+    out dx, al
+    mov dx, 0x3FB
+    mov al, 0x80
+    out dx, al
+    mov dx, 0x3F8
+    mov al, 0x03
+    out dx, al
+    mov dx, 0x3F9
+    xor al, al
+    out dx, al
+    mov dx, 0x3FB
+    mov al, 0x03
+    out dx, al
+    mov dx, 0x3FA
+    mov al, 0xC7
+    out dx, al
+    mov dx, 0x3FC
+    mov al, 0x0B
+    out dx, al
+    ret
+
+serial_print:
+.next:
+    lodsb
+    test al, al
+    jz .newline
+    push rax
+.wait:
+    mov dx, 0x3FD
+    in al, dx
+    test al, 0x20
+    jz .wait
+    pop rax
+    mov dx, 0x3F8
+    out dx, al
+    jmp .next
+.newline:
+    mov dx, 0x3F8
+    mov al, 0x0D
+    out dx, al
+    mov al, 0x0A
+    out dx, al
+    ret
 
 vga_print:
 .next:
