@@ -164,6 +164,13 @@ long_mode_start:
     mov rsi, KERNEL_BASE + msg_pit
     call vga_print
 
+%ifdef SAFIROS_V86_TEST
+    cli
+.v86_test_halt:
+    hlt
+    jmp .v86_test_halt
+%endif
+
     mov rdi, IDT_BASE
     mov rcx, 256
 .fill_idt:
