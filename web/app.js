@@ -73,7 +73,7 @@ async function checkResource(path,label){
 
   try{
     const response=await fetch(path+"?bootcheck="+Date.now(),{
-      method:"GET",
+      method:"HEAD",
       cache:"no-store",
       signal:controller.signal
     });
