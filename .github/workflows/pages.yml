@@ -50,6 +50,10 @@ jobs:
           dd if=build/boot.bin of=site/SafirOS.img bs=512 seek=0 conv=notrunc status=none
           dd if=build/kernel.bin of=site/SafirOS.img bs=512 seek=1 conv=notrunc status=none
           test "$(stat -c%s site/SafirOS.img)" -eq 1474560
+          dd if=/dev/zero of=site/SafirOS-v86-test.img bs=512 count=2880 status=none
+          dd if=build/boot.bin of=site/SafirOS-v86-test.img bs=512 seek=0 conv=notrunc status=none
+          dd if=build/kernel-v86-test.bin of=site/SafirOS-v86-test.img bs=512 seek=1 conv=notrunc status=none
+          test "$(stat -c%s site/SafirOS-v86-test.img)" -eq 1474560
           cp site/SafirOS.img web/SafirOS.img
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
