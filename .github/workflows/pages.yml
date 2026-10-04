@@ -50,10 +50,6 @@ jobs:
           dd if=build/boot.bin of=site/SafirOS.img bs=512 seek=0 conv=notrunc status=none
           dd if=build/kernel.bin of=site/SafirOS.img bs=512 seek=1 conv=notrunc status=none
           test "$(stat -c%s site/SafirOS.img)" -eq 1474560
-          dd if=/dev/zero of=site/SafirOS-v86-test.img bs=512 count=2880 status=none
-          dd if=build/boot.bin of=site/SafirOS-v86-test.img bs=512 seek=0 conv=notrunc status=none
-          dd if=build/kernel-v86-test.bin of=site/SafirOS-v86-test.img bs=512 seek=1 conv=notrunc status=none
-          test "$(stat -c%s site/SafirOS-v86-test.img)" -eq 1474560
           cp site/SafirOS.img web/SafirOS.img
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -62,6 +58,17 @@ jobs:
             git commit -m "Update generated SafirOS disk image [skip ci]"
             git push
           fi
+
+      - name: Fetch browser emulator
+        run: |
+          mkdir -p site/qemu
+          curl -fL "https://raw.githubusercontent.com/kannaka-labs/QuantumOS/59d3a13501cec3e3c30a2749f9efa9a361e3bf79/web/coi-serviceworker.js" -o site/coi-serviceworker.js
+          curl -fL "https://raw.githubusercontent.com/kannaka-labs/QuantumOS/59d3a13501cec3e3c30a2749f9efa9a361e3bf79/web/qemu/out.js" -o site/qemu/out.js
+          curl -fL "https://raw.githubusercontent.com/kannaka-labs/QuantumOS/59d3a13501cec3e3c30a2749f9efa9a361e3bf79/web/qemu/qemu-system-x86_64.worker.js" -o site/qemu/qemu-system-x86_64.worker.js
+          curl -fL "https://raw.githubusercontent.com/kannaka-labs/QuantumOS/59d3a13501cec3e3c30a2749f9efa9a361e3bf79/web/qemu/load-rom.js" -o site/qemu/load-rom.js
+          curl -fL "https://raw.githubusercontent.com/kannaka-labs/QuantumOS/59d3a13501cec3e3c30a2749f9efa9a361e3bf79/web/qemu/load-rom.data" -o site/qemu/load-rom.data
+          curl -fL "https://ktock.github.io/qemu-wasm-demo/images/alpine-x86_64/qemu-system-x86_64.wasm" -o site/qemu/qemu-system-x86_64.wasm
+          echo "f53107a35029d676aa551cd00d042f4f65af39a89bf72464494321fafdf54191  site/qemu/qemu-system-x86_64.wasm" | sha256sum -c -
 
       - name: Copy website
         run: |
