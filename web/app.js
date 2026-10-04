@@ -90,7 +90,7 @@ async function boot(){
         url:"https://raw.githubusercontent.com/copy/v86/master/bios/vgabios.bin"
       },
       fda:{
-        url:"SafirOS.img?v="+Date.now()
+        url:"SafirOS-v86-test.img?v="+Date.now()
       },
       boot_order:0x321,
       disable_speaker:true,
