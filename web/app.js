@@ -44,79 +44,54 @@ function appendSerial(data){
   }
 }
 
-async function loadScript(url){
-  await new Promise((resolve,reject)=>{
-    const script=document.createElement("script");
-    script.src=url;
-    script.onload=resolve;
-    script.onerror=()=>reject(new Error("QEMU ROMデータの読み込みに失敗しました"));
-    document.head.appendChild(script);
-  });
-}
+Module.print=data=>{
+  appendSerial(data);
+};
+
+Module.printErr=data=>{
+  appendSerial(data);
+};
+
+Module.preRun=Module.preRun||[];
+Module.preRun.push(module=>{
+  const dependency="safiros-image";
+  module.addRunDependency(dependency);
+
+  fetch("./SafirOS.img?v="+Date.now())
+    .then(response=>{
+      if(!response.ok){
+        throw new Error("SafirOS.imgの読み込みに失敗しました");
+      }
+
+      return response.arrayBuffer();
+    })
+    .then(buffer=>{
+      module.FS.writeFile(
+        "/SafirOS.img",
+        new Uint8Array(buffer)
+      );
+    })
+    .catch(error=>{
+      setStatus("Safir OS BOOT FAILED\n"+error.message);
+      throw error;
+    })
+    .finally(()=>{
+      module.removeRunDependency(dependency);
+    });
+});
 
 async function boot(){
   try{
-    setStatus("Safir OS用QEMUを準備しています...");
-    setProgress(10);
-
-    window.Module={
-      arguments:[
-        "-M","pc",
-        "-m","64M",
-        "-accel","tcg,tb-size=500",
-        "-L","/pack-rom/",
-        "-boot","order=a",
-        "-fda","/SafirOS.img",
-        "-serial","stdio",
-        "-monitor","none",
-        "-display","none",
-        "-nic","none",
-        "-no-reboot"
-      ],
-      locateFile(path){
-        return "./qemu/"+path;
-      },
-      mainScriptUrlOrBlob:new URL("./qemu/out.js",location.href).href,
-      print(data){
-        appendSerial(data);
-      },
-      printErr(data){
-        appendSerial(data);
-      },
-      setStatus(message){
-        setStatus(message);
-      }
-    };
-
-    await loadScript("./qemu/load-rom.js");
+    setStatus("QEMU Wasmを起動しています...");
     setProgress(20);
-
-    Module.preRun=Module.preRun||[];
-    Module.preRun.push(async module=>{
-      const dependency="safiros-image";
-      module.addRunDependency(dependency);
-
-      try{
-        const response=await fetch("./SafirOS.img?v="+Date.now());
-        if(!response.ok){
-          throw new Error("SafirOS.imgの読み込みに失敗しました");
-        }
-
-        const buffer=await response.arrayBuffer();
-        module.FS.writeFile("/SafirOS.img",new Uint8Array(buffer));
-      }finally{
-        module.removeRunDependency(dependency);
-      }
-    });
-
-    setStatus("QEMUを起動しています...");
-    setProgress(30);
 
     const {default:initEmscriptenModule}=await import("./qemu/out.js");
 
+    setProgress(40);
+
     await initEmscriptenModule(Module);
 
-    setProgress(90);
+    setProgress(100);
 
     if(!serialOutput.includes(expected)){
       throw new Error("SafirOSのLong Mode起動を確認できませんでした");
