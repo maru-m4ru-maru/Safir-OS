@@ -7,6 +7,28 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 <script src="coi-serviceworker.js"></script>
+<script>
+window.Module={
+  arguments:[
+    "-M","pc",
+    "-m","64M",
+    "-accel","tcg,tb-size=500",
+    "-L","/pack-rom/",
+    "-boot","order=a",
+    "-fda","/SafirOS.img",
+    "-serial","stdio",
+    "-monitor","none",
+    "-display","none",
+    "-nic","none",
+    "-no-reboot"
+  ],
+  locateFile(path){
+    return "./qemu/"+path;
+  },
+  mainScriptUrlOrBlob:new URL("./qemu/out.js",location.href).href
+};
+</script>
+<script src="qemu/load-rom.js"></script>
 </head>
 <body>
 <div id="boot_screen">
