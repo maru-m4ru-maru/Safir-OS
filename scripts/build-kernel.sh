@@ -48,4 +48,3 @@ build_kernel() {
 
 build_kernel "" build/kernel.bin
 build_kernel "SAFIROS_QEMU_TEST" build/kernel-qemu.bin
-build_kernel "SAFIROS_V86_TEST" build/kernel-v86-test.bin
