@@ -17,14 +17,15 @@ window.Module={
     "-accel","tcg,tb-size=500",
     "-L","/pack-rom/",
     "-boot","order=a",
-    "-fda",window.SAFIROS_BASE+"SafirOS.img",
+    "-fda","/SafirOS.img",
+    "-serial","stdio",
     "-monitor","none",
     "-nographic",
     "-nic","none",
     "-no-reboot"
   ],
   locateFile(path){
-    return "./qemu/"+path;
+    return window.SAFIROS_BASE+"qemu/"+path;
   },
   mainScriptUrlOrBlob:new URL("./qemu/out.js",location.href).href
 };
