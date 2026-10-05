@@ -66,6 +66,7 @@ jobs:
           curl -fL "https://raw.githubusercontent.com/kannaka-labs/QuantumOS/59d3a13501cec3e3c30a2749f9efa9a361e3bf79/web/qemu/out.js" -o site/qemu/out.js
           curl -fL "https://raw.githubusercontent.com/kannaka-labs/QuantumOS/59d3a13501cec3e3c30a2749f9efa9a361e3bf79/web/qemu/qemu-system-x86_64.worker.js" -o site/qemu/qemu-system-x86_64.worker.js
           curl -fL "https://raw.githubusercontent.com/kannaka-labs/QuantumOS/59d3a13501cec3e3c30a2749f9efa9a361e3bf79/web/qemu/load-rom.js" -o site/qemu/load-rom.js
+          curl -fL "https://raw.githubusercontent.com/kannaka-labs/QuantumOS/59d3a13501cec3e3c30a2749f9efa9a361e3bf79/web/vendor/xterm-pty.js" -o site/qemu/xterm-pty.js
           curl -fL "https://raw.githubusercontent.com/kannaka-labs/QuantumOS/59d3a13501cec3e3c30a2749f9efa9a361e3bf79/web/qemu/load-rom.data" -o site/qemu/load-rom.data
           curl -fL "https://ktock.github.io/qemu-wasm-demo/images/alpine-x86_64/qemu-system-x86_64.wasm" -o site/qemu/qemu-system-x86_64.wasm
           echo "f53107a35029d676aa551cd00d042f4f65af39a89bf72464494321fafdf54191  site/qemu/qemu-system-x86_64.wasm" | sha256sum -c -
