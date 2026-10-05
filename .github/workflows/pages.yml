@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: safiros-pages
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pages: write
@@ -50,14 +54,6 @@ jobs:
           dd if=build/boot.bin of=site/SafirOS.img bs=512 seek=0 conv=notrunc status=none
           dd if=build/kernel.bin of=site/SafirOS.img bs=512 seek=1 conv=notrunc status=none
           test "$(stat -c%s site/SafirOS.img)" -eq 1474560
-          cp site/SafirOS.img web/SafirOS.img
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add web/SafirOS.img
-          if ! git diff --cached --quiet; then
-            git commit -m "Update generated SafirOS disk image [skip ci]"
-            git push
-          fi
 
       - name: Fetch browser emulator
         run: |
@@ -78,6 +74,21 @@ jobs:
           cp web/qemu/load-rom.js site/qemu/load-rom.js
           cp web/safiros-logo.svg site/safiros-logo.svg
           cp favicon.svg site/favicon.svg
+
+      - name: Verify website files
+        run: |
+          test -f site/index.html
+          test -f site/app.js
+          test -f site/coi-serviceworker.js
+          test -f site/qemu/xterm-pty.js
+          test -f site/qemu/load-rom.js
+          test -f site/qemu/out.js
+          test -f site/qemu/qemu-system-x86_64.worker.js
+          test -f site/qemu/load-rom.data
+          test -f site/qemu/qemu-system-x86_64.wasm
+          test -f site/SafirOS.img
+          test -f site/favicon.svg
+          find site -maxdepth 2 -type f -printf '%p %s bytes\n' | sort
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
