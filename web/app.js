@@ -8,7 +8,7 @@ const bootScreen=document.getElementById("boot_screen");
 const expected="SafirOS 64-bit Long Mode";
 let serialOutput="";
 let ptyMaster=null;
-let decoder=null;
+let ptySource=null;
 let lastDependencyCount=-1;
 
 window.addEventListener("keydown",event=>{
@@ -63,27 +63,6 @@ function appendSerial(data){
       bootScreen.remove();
     },500);
   }
-}
-
-function pollPty(){
-  try{
-    if(ptyMaster&&ptyMaster.readable){
-      const bytes=ptyMaster.read();
-
-      if(bytes.length>0){
-        appendSerial(
-          decoder.decode(
-            new Uint8Array(bytes),
-            {stream:true}
-          )
-        );
-      }
-    }
-  }catch(error){
-    appendSerial("[pty] "+error.message+"\n");
-  }
-
-  requestAnimationFrame(pollPty);
 }
 
 const moduleConfig=window.Module;
@@ -158,6 +137,7 @@ async function waitForRuntime(startedAt){
       throw new Error(
         "QEMU起動がタイムアウトしました。依存残り="+lastDependencyCount+
         "、PTY="+String(Boolean(ptyMaster))+
+        "、PTY接続="+String(Boolean(ptySource))+
         "、SharedArrayBuffer="+String(typeof SharedArrayBuffer!=="undefined")+
         "、crossOriginIsolated="+String(window.crossOriginIsolated)
       );
@@ -192,9 +172,35 @@ async function boot(){
       throw new Error("QEMU用PTY slaveの初期化に失敗しました");
     }
 
-    decoder=new TextDecoder();
+    ptySource={
+      write(data){
+        if(data instanceof Uint8Array){
+          appendSerial(new TextDecoder().decode(data));
+          return;
+        }
 
-    requestAnimationFrame(pollPty);
+        appendSerial(String(data));
+      },
+      onData(){
+        return {
+          dispose(){}
+        };
+      },
+      onBinary(){
+        return {
+          dispose(){}
+        };
+      },
+      onResize(){
+        return {
+          dispose(){}
+        };
+      }
+    };
+
+    ptyMaster.activate(ptySource);
+
+    appendSerial("[boot] PTY master connected\n");
 
     setProgress(10);
 
