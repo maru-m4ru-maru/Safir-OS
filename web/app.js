@@ -5,6 +5,9 @@ const serialConsole=document.getElementById("serial_console");
 const progressBar=document.getElementById("progress_bar");
 const bootScreen=document.getElementById("boot_screen");
 
+const siteBase=window.SAFIROS_BASE||"./";
+const qemuBase=siteBase+"qemu/";
+
 const expected="SafirOS 64-bit Long Mode";
 let serialOutput="";
 let ptyMaster=null;
@@ -102,7 +105,7 @@ moduleConfig.preRun.push(module=>{
   const dependency="safiros-image";
   module.addRunDependency(dependency);
 
-  fetch("./SafirOS.img?v="+Date.now(),{
+  fetch(siteBase+"SafirOS.img?v="+Date.now(),{
     cache:"no-store"
   })
     .then(response=>{
@@ -212,7 +215,7 @@ async function boot(){
       ", onSignal="+String(typeof moduleConfig.pty.onSignal==="function")+"\n"
     );
 
-    const {default:initEmscriptenModule}=await import("./qemu/out.js");
+    const {default:initEmscriptenModule}=await import(qemuBase+"out.js");
 
     setStatus("QEMU Wasmを起動しています...");
     setProgress(40);
