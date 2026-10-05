@@ -230,7 +230,7 @@ async function boot(){
           return (pty.readable?1:0)|(pty.writable?4:0);
         }
 
-        return oldPoll.call(this,stream,timeout);
+        return oldPoll.call(stream,timeout);
       };
 
       appendSerial("[boot] PTY poll connected\n");
