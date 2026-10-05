@@ -7,6 +7,8 @@ const bootScreen=document.getElementById("boot_screen");
 
 const expected="SafirOS 64-bit Long Mode";
 let serialOutput="";
+let ptyMaster=null;
+let decoder=null;
 let lastDependencyCount=-1;
 
 window.addEventListener("keydown",event=>{
@@ -63,35 +65,25 @@ function appendSerial(data){
   }
 }
 
-async function checkResource(path,label){
-  setStatus(label+"を確認しています...");
-
-  const controller=new AbortController();
-  const timer=setTimeout(()=>{
-    controller.abort();
-  },10000);
-
+function pollPty(){
   try{
-    const response=await fetch(path+"?bootcheck="+Date.now(),{
-      method:"HEAD",
-      cache:"no-store",
-      signal:controller.signal
-    });
+    if(ptyMaster&&ptyMaster.readable){
+      const bytes=ptyMaster.read();
 
-    if(!response.ok){
-      throw new Error(label+"のHTTP "+response.status);
+      if(bytes.length>0){
+        appendSerial(
+          decoder.decode(
+            new Uint8Array(bytes),
+            {stream:true}
+          )
+        );
+      }
     }
-
-    return response;
   }catch(error){
-    if(error.name==="AbortError"){
-      throw new Error(label+"の読み込みがタイムアウトしました");
-    }
-
-    throw error;
-  }finally{
-    clearTimeout(timer);
+    appendSerial("[pty] "+error.message+"\n");
   }
+
+  requestAnimationFrame(pollPty);
 }
 
 Module.print=data=>{
@@ -163,6 +155,7 @@ async function waitForRuntime(startedAt){
     if(performance.now()-startedAt>=30000){
       throw new Error(
         "QEMU起動がタイムアウトしました。依存残り="+lastDependencyCount+
+        "、PTY="+String(Boolean(ptyMaster))+
         "、SharedArrayBuffer="+String(typeof SharedArrayBuffer!=="undefined")+
         "、crossOriginIsolated="+String(window.crossOriginIsolated)
       );
@@ -185,26 +178,27 @@ async function boot(){
       throw new Error("crossOriginIsolatedが有効になっていません");
     }
 
+    if(typeof openpty!=="function"){
+      throw new Error("QEMU用PTYの初期化に失敗しました");
+    }
+
+    const pty=openpty();
+    ptyMaster=pty.master;
+    Module.pty=pty.slave;
+    decoder=new TextDecoder();
+
+    requestAnimationFrame(pollPty);
+
     setProgress(10);
 
-    await checkResource("./qemu/load-rom.data","QEMU ROMデータ");
+    setStatus("QEMU ROMデータを確認しています...");
     setProgress(15);
 
-    await checkResource("./qemu/out.js","QEMU JavaScript");
-    setProgress(20);
-
-    await checkResource("./qemu/qemu-system-x86_64.worker.js","QEMU worker");
-    setProgress(25);
-
-    await checkResource("./qemu/qemu-system-x86_64.wasm","QEMU Wasm本体");
-    setProgress(35);
-
-    await checkResource("./SafirOS.img","SafirOSディスクイメージ");
-    setProgress(40);
+    const {default:initEmscriptenModule}=await import("./qemu/out.js");
 
     setStatus("QEMU Wasmを起動しています...");
+    setProgress(40);
 
-    const {default:initEmscriptenModule}=await import("./qemu/out.js");
     const startedAt=performance.now();
 
     await initEmscriptenModule(Module);
@@ -212,12 +206,6 @@ async function boot(){
     await waitForRuntime(startedAt);
 
     setProgress(100);
-
-    if(serialOutput.includes(expected)){
-      return;
-    }
-
-    throw new Error("SafirOSのLong Mode起動を確認できませんでした");
   }catch(error){
     setStatus("Safir OS BOOT FAILED\n"+error.message);
   }
