@@ -86,15 +86,17 @@ function pollPty(){
   requestAnimationFrame(pollPty);
 }
 
-Module.print=data=>{
+const moduleConfig=window.Module;
+
+moduleConfig.print=data=>{
   appendSerial(data);
 };
 
-Module.printErr=data=>{
+moduleConfig.printErr=data=>{
   appendSerial(data);
 };
 
-Module.monitorRunDependencies=count=>{
+moduleConfig.monitorRunDependencies=count=>{
   lastDependencyCount=count;
 
   if(count>0){
@@ -102,7 +104,7 @@ Module.monitorRunDependencies=count=>{
   }
 };
 
-Module.onAbort=reason=>{
+moduleConfig.onAbort=reason=>{
   const message=reason&&reason.message
     ?reason.message
     :String(reason);
@@ -110,14 +112,14 @@ Module.onAbort=reason=>{
   appendSerial("[QEMU abort] "+message+"\n");
 };
 
-Module.setStatus=message=>{
+moduleConfig.setStatus=message=>{
   if(message){
     setStatus("QEMU: "+message);
   }
 };
 
-Module.preRun=Module.preRun||[];
-Module.preRun.push(module=>{
+moduleConfig.preRun=moduleConfig.preRun||[];
+moduleConfig.preRun.push(module=>{
   const dependency="safiros-image";
   module.addRunDependency(dependency);
 
@@ -184,7 +186,12 @@ async function boot(){
 
     const pty=openpty();
     ptyMaster=pty.master;
-    Module.pty=pty.slave;
+    moduleConfig.pty=pty.slave;
+
+    if(!moduleConfig.pty||typeof moduleConfig.pty.onSignal!=="function"){
+      throw new Error("QEMU用PTY slaveの初期化に失敗しました");
+    }
+
     decoder=new TextDecoder();
 
     requestAnimationFrame(pollPty);
@@ -194,6 +201,11 @@ async function boot(){
     setStatus("QEMU ROMデータを確認しています...");
     setProgress(15);
 
+    appendSerial(
+      "[boot] PTY initialized="+String(Boolean(moduleConfig.pty))+
+      ", onSignal="+String(typeof moduleConfig.pty.onSignal==="function")+"\n"
+    );
+
     const {default:initEmscriptenModule}=await import("./qemu/out.js");
 
     setStatus("QEMU Wasmを起動しています...");
@@ -201,7 +213,7 @@ async function boot(){
 
     const startedAt=performance.now();
 
-    await initEmscriptenModule(Module);
+    await initEmscriptenModule(moduleConfig);
 
     await waitForRuntime(startedAt);
 
