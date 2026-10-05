@@ -7,8 +7,9 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 <script src="coi-serviceworker.js"></script>
-<script src="qemu/xterm-pty.js"></script>
+<script src="./qemu/xterm-pty.js"></script>
 <script>
+window.SAFIROS_BASE=location.pathname.includes("/web/")?"../":"./";
 window.Module={
   arguments:[
     "-M","pc",
@@ -28,7 +29,9 @@ window.Module={
   mainScriptUrlOrBlob:new URL("./qemu/out.js",location.href).href
 };
 </script>
-<script src="qemu/load-rom.js"></script>
+<script>
+document.write('<script src="'+window.SAFIROS_BASE+'qemu/load-rom.js"><\/script>');
+</script>
 </head>
 <body>
 <div id="boot_screen">
