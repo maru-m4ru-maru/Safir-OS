@@ -201,9 +201,11 @@ async function boot(){
       }
     };
 
-    ptyMaster.activate(ptySource);
+    ptyMaster.onWrite(([data])=>{
+      ptySource.write(data);
+    });
 
-    appendSerial("[boot] PTY master connected\n");
+    appendSerial("[boot] PTY master output listener connected\n");
 
     setProgress(10);
 
