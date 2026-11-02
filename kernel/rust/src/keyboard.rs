@@ -289,7 +289,7 @@ unsafe fn drain_serial_input<const N: usize>(input: &mut KeyboardInput<N>) {
             options(nomem, nostack, preserves_flags)
         );
 
-        if status & 0x01 == 0 || input.is_full() {
+        if status == 0xFF || status & 0x01 == 0 || input.is_full() {
             break;
         }
 
