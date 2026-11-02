@@ -6,6 +6,36 @@ const VGA_HEIGHT: usize = 25;
 const DEFAULT_ATTRIBUTE: u8 = 0x0F;
 const CONSOLE_START_ROW: usize = 6;
 
+#[cfg(target_os = "none")]
+fn serial_write_byte(byte: u8) {
+    unsafe {
+        loop {
+            let status: u8;
+
+            core::arch::asm!(
+                "in al, dx",
+                in("dx") 0x3FDu16,
+                lateout("al") status,
+                options(nomem, nostack, preserves_flags)
+            );
+
+            if status & 0x20 != 0 {
+                break;
+            }
+        }
+
+        core::arch::asm!(
+            "out dx, al",
+            in("dx") 0x3F8u16,
+            in("al") byte,
+            options(nomem, nostack, preserves_flags)
+        );
+    }
+}
+
+#[cfg(not(target_os = "none"))]
+fn serial_write_byte(_byte: u8) {}
+
 pub struct Writer {
     row: usize,
     column: usize,
@@ -40,12 +70,16 @@ impl Writer {
     fn write_byte(&mut self, byte: u8) {
         match byte {
             b'\n' => {
+                serial_write_byte(b'\r');
+                serial_write_byte(b'\n');
                 self.column = 0;
                 if self.row + 1 < VGA_HEIGHT {
                     self.row += 1;
                 }
             }
             0x08 => {
+                serial_write_byte(byte);
+
                 if self.column > 0 {
                     self.column -= 1;
                 } else if self.row > 0 {
@@ -57,6 +91,7 @@ impl Writer {
                 self.put_at(self.row, self.column, b' ');
             }
             b'\t' => {
+                serial_write_byte(byte);
                 let next = (self.column + 4) & !3;
                 while self.column < next {
                     self.put_at(self.row, self.column, b' ');
@@ -71,6 +106,7 @@ impl Writer {
                 }
             }
             0x20..=0x7E => {
+                serial_write_byte(byte);
                 self.put_at(self.row, self.column, byte);
                 self.column += 1;
                 if self.column == VGA_WIDTH {
