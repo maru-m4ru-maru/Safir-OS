@@ -145,6 +145,11 @@ pub fn console_init() {
 }
 
 pub fn console_clear() {
+    #[cfg(target_os = "none")]
+    for byte in b"\\x1B[2J\\x1B[H" {
+        serial_write_byte(*byte);
+    }
+
     unsafe {
         let writer = &mut *core::ptr::addr_of_mut!(CONSOLE_WRITER);
         writer.clear();
