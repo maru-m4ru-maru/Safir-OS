@@ -11,8 +11,9 @@ const qemuBase=siteBase+"qemu/";
 const expected="SafirOS 64-bit Long Mode";
 let serialOutput="";
 let ptyMaster=null;
-let ptySource=null;
+let ptyOutputListener=null;
 let lastDependencyCount=-1;
+const serialDecoder=new TextDecoder();
 
 window.addEventListener("keydown",event=>{
   if(event.ctrlKey&&event.shiftKey&&event.code==="KeyR"){
@@ -83,6 +84,8 @@ moduleConfig.monitorRunDependencies=count=>{
 
   if(count>0){
     setStatus("QEMU依存リソースを読み込んでいます... 残り "+count);
+  }else if(count===0){
+    setStatus("QEMU依存リソース読込完了。SafirOSの起動ログを待っています...");
   }
 };
 
@@ -95,9 +98,16 @@ moduleConfig.onAbort=reason=>{
 };
 
 moduleConfig.setStatus=message=>{
-  if(message){
-    setStatus("QEMU: "+message);
+  if(!message){
+    return;
   }
+
+  if(lastDependencyCount===0){
+    setStatus("QEMU依存リソース読込完了。SafirOSの起動ログを待っています...");
+    return;
+  }
+
+  setStatus("QEMU: "+message);
 };
 
 moduleConfig.preRun=moduleConfig.preRun||[];
@@ -138,9 +148,9 @@ async function waitForRuntime(startedAt){
 
     if(performance.now()-startedAt>=30000){
       throw new Error(
-        "QEMU起動がタイムアウトしました。依存残り="+lastDependencyCount+
+        "Long Mode到達ログを受信できませんでした。依存残り="+lastDependencyCount+
         "、PTY="+String(Boolean(ptyMaster))+
-        "、PTY接続="+String(Boolean(ptySource))+
+        "、PTY出力監視="+String(Boolean(ptyOutputListener))+
         "、SharedArrayBuffer="+String(typeof SharedArrayBuffer!=="undefined")+
         "、crossOriginIsolated="+String(window.crossOriginIsolated)
       );
@@ -175,34 +185,18 @@ async function boot(){
       throw new Error("QEMU用PTY slaveの初期化に失敗しました");
     }
 
-    ptySource={
-      write(data){
-        if(data instanceof Uint8Array){
-          appendSerial(new TextDecoder().decode(data));
-          return;
+    ptyOutputListener=ptyMaster.onWrite(([data,onConsumed])=>{
+      try{
+        const bytes=data instanceof Uint8Array
+          ?data
+          :new Uint8Array(data);
+
+        appendSerial(serialDecoder.decode(bytes,{stream:true}));
+      }finally{
+        if(typeof onConsumed==="function"){
+          onConsumed();
         }
-
-        appendSerial(String(data));
-      },
-      onData(){
-        return {
-          dispose(){}
-        };
-      },
-      onBinary(){
-        return {
-          dispose(){}
-        };
-      },
-      onResize(){
-        return {
-          dispose(){}
-        };
       }
-    };
-
-    ptyMaster.onWrite(([data])=>{
-      ptySource.write(data);
     });
 
     appendSerial("[boot] PTY master output listener connected\n");
@@ -222,8 +216,6 @@ async function boot(){
     setStatus("QEMU Wasmを起動しています...");
     setProgress(40);
 
-    const startedAt=performance.now();
-
     await initEmscriptenModule(moduleConfig);
 
     if(moduleConfig["TTY"]&&moduleConfig["TTY"].stream_ops){
@@ -241,11 +233,12 @@ async function boot(){
       appendSerial("[boot] PTY poll connected\n");
     }
 
-    await waitForRuntime(startedAt);
+    setStatus("QEMU初期化完了。SafirOSの起動ログを受信しています...");
+    await waitForRuntime(performance.now());
 
     setProgress(100);
   }catch(error){
-    setStatus("Safir OS BOOT FAILED\n"+error.message);
+    setStatus("Safir OS 起動未確認\n"+error.message);
   }
 }
 
