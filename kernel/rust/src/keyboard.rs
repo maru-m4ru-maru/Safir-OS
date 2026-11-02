@@ -268,6 +268,39 @@ pub unsafe extern "C" fn keyboard_irq(scancode: u8) -> u64 {
 }
 
 #[cfg(not(feature = "host-test"))]
+fn serial_pop_byte() -> Option<u8> {
+    unsafe {
+        let status: u8;
+
+        asm!(
+            "in al, dx",
+            in("dx") 0x3FDu16,
+            lateout("al") status,
+            options(nomem, nostack, preserves_flags)
+        );
+
+        if status & 0x01 == 0 {
+            return None;
+        }
+
+        let byte: u8;
+
+        asm!(
+            "in al, dx",
+            in("dx") 0x3F8u16,
+            lateout("al") byte,
+            options(nomem, nostack, preserves_flags)
+        );
+
+        Some(match byte {
+            b'\\r' | b'\\n' => b'\\n',
+            0x7F => 0x08,
+            value => value,
+        })
+    }
+}
+
+#[cfg(not(feature = "host-test"))]
 pub fn pop_byte() -> Option<u8> {
     let flags: u64;
 
@@ -281,7 +314,7 @@ pub fn pop_byte() -> Option<u8> {
         asm!("cli", options(nomem, nostack, preserves_flags));
 
         let input = &mut *core::ptr::addr_of_mut!(KEYBOARD_INPUT);
-        let byte = input.pop();
+        let byte = input.pop().or_else(serial_pop_byte);
 
         if flags & 0x200 != 0 {
             asm!("sti", options(nomem, nostack, preserves_flags));
