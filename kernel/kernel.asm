@@ -30,6 +30,9 @@ start:
     mov ds, ax
     mov es, ax
 
+    mov si, msg_real_mode
+    call serial_print16
+
     lgdt [cs:gdt32_descriptor]
 
     mov word [e820_count], 0
@@ -63,6 +66,9 @@ start:
     mov ax, 0x1000
     mov es, ax
 
+    mov si, msg_e820
+    call serial_print16
+
     in al, 0x92
     or al, 00000010b
     out 0x92, al
@@ -71,6 +77,24 @@ start:
     or eax, 0x00000001
     mov cr0, eax
     jmp dword 0x08:(KERNEL_BASE + protected_mode_start)
+
+serial_print16:
+.next:
+    lodsb
+    test al, al
+    jz .done
+    push ax
+.wait:
+    mov dx, 0x3FD
+    in al, dx
+    test al, 0x20
+    jz .wait
+    pop ax
+    mov dx, 0x3F8
+    out dx, al
+    jmp .next
+.done:
+    ret
 
 bits 32
 
@@ -85,6 +109,9 @@ protected_mode_start:
     mov gs, ax
 
     mov esp, EARLY_STACK
+
+    mov esi, KERNEL_BASE + msg_protected
+    call serial_print32
 
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'P'
@@ -130,7 +157,28 @@ protected_mode_start:
     or eax, (1 << 31)
     mov cr0, eax
 
+    mov esi, KERNEL_BASE + msg_entering_long_mode
+    call serial_print32
+
     jmp dword 0x18:(KERNEL_BASE + long_mode_start)
+
+serial_print32:
+.next:
+    lodsb
+    test al, al
+    jz .done
+    push eax
+.wait:
+    mov dx, 0x3FD
+    in al, dx
+    test al, 0x20
+    jz .wait
+    pop eax
+    mov dx, 0x3F8
+    out dx, al
+    jmp .next
+.done:
+    ret
 
 bits 64
 
@@ -158,18 +206,6 @@ long_mode_start:
     mov rsi, KERNEL_BASE + msg_long_mode
     call vga_print
     mov rsi, KERNEL_BASE + msg_long_mode
-    call serial_print
-
-    mov rdi, VGA_BASE + (80 * 2)
-    mov rsi, KERNEL_BASE + msg_idt
-    call vga_print
-    mov rsi, KERNEL_BASE + msg_idt
-    call serial_print
-
-    mov rdi, VGA_BASE + (80 * 4)
-    mov rsi, KERNEL_BASE + msg_pit
-    call vga_print
-    mov rsi, KERNEL_BASE + msg_pit
     call serial_print
 
     mov rdi, IDT_BASE
@@ -214,12 +250,21 @@ long_mode_start:
 
     lidt [KERNEL_BASE + idtr]
 
+    mov rdi, VGA_BASE + (80 * 2)
+    mov rsi, KERNEL_BASE + msg_idt
+    call vga_print
+    mov rsi, KERNEL_BASE + msg_idt
+    call serial_print
+
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'I'
     out 0xE9, al
 %endif
 
     call ps2_init_keyboard
+
+    mov rsi, KERNEL_BASE + msg_ps2
+    call serial_print
 
     mov al, 0x11
     out 0x20, al
@@ -247,6 +292,9 @@ long_mode_start:
     mov al, 0xFF
     out 0xA1, al
 
+    mov rsi, KERNEL_BASE + msg_pic
+    call serial_print
+
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'C'
     out 0xE9, al
@@ -259,6 +307,12 @@ long_mode_start:
     out 0x40, al
     mov al, ah
     out 0x40, al
+
+    mov rdi, VGA_BASE + (80 * 4)
+    mov rsi, KERNEL_BASE + msg_pit
+    call vga_print
+    mov rsi, KERNEL_BASE + msg_pit
+    call serial_print
 
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'H'
@@ -278,6 +332,9 @@ long_mode_start:
 %ifdef SAFIROS_QEMU_TEST
     mov edx, 1
 %endif
+    mov rsi, KERNEL_BASE + msg_rust
+    call serial_print
+
     mov rax, RUST_BASE
     call rax
 
@@ -560,9 +617,16 @@ idtr:
     dw 256 * 16 - 1
     dq IDT_BASE
 
-msg_long_mode db "SafirOS 64-bit Long Mode", 0
-msg_idt       db "IDT: OK", 0
-msg_pit       db "PIT: 100 Hz", 0
+msg_long_mode          db "SafirOS 64-bit Long Mode", 0
+msg_idt                db "IDT: OK", 0
+msg_pit                db "PIT: 100 Hz", 0
+msg_real_mode          db "KERNEL: 16-bit real mode entered", 13, 10, 0
+msg_e820               db "KERNEL: E820 collection complete", 13, 10, 0
+msg_protected          db "KERNEL: 32-bit protected mode entered", 13, 10, 0
+msg_entering_long_mode db "KERNEL: entering 64-bit long mode", 13, 10, 0
+msg_ps2                db "PS/2: controller configured", 0
+msg_pic                db "PIC: remapped", 0
+msg_rust               db "KERNEL: entering Rust", 0
 msg_fault     db "EXCEPTION: CPU STOPPED", 0
 hex_table     db "0123456789ABCDEF"
 
