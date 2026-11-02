@@ -78,7 +78,9 @@ impl Writer {
                 }
             }
             0x08 => {
-                serial_write_byte(byte);
+                serial_write_byte(0x08);
+                serial_write_byte(b' ');
+                serial_write_byte(0x08);
 
                 if self.column > 0 {
                     self.column -= 1;
