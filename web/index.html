@@ -3,11 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827">
 <title>Safir OS</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="terminal/xterm.css">
 <script src="coi-serviceworker.js"></script>
 <script src="./qemu/xterm-pty.js"></script>
+<script src="terminal/xterm.js"></script>
+<script src="terminal/addon-fit.js"></script>
 <script>
 window.SAFIROS_BASE=location.pathname.includes("/web/")?"../":"./";
 window.Module={
@@ -17,7 +21,7 @@ window.Module={
     "-accel","tcg,tb-size=500",
     "-L","/pack-rom/",
     "-boot","order=a",
-    "-fda","/SafirOS.img",
+    "-drive","file=/SafirOS.img,format=raw,if=floppy",
     "-serial","stdio",
     "-monitor","none",
     "-nographic",
@@ -31,18 +35,58 @@ window.Module={
 };
 </script>
 <script>
-document.write('<script src="'+window.SAFIROS_BASE+'qemu/load-rom.js"><\/script>');
+document.write('<script src="'+window.SAFIROS_BASE+'qemu/load-rom.js"><\\/script>');
 </script>
 </head>
 <body>
+<div id="app_shell">
+  <header id="topbar">
+    <div class="brand">
+      <div class="brand_icon">S</div>
+      <div class="brand_name">Safir OS</div>
+      <span class="brand_tag">WEB VM</span>
+    </div>
+    <div class="machine_info">
+      <span class="machine_dot"></span>
+      <span>QEMU / WebAssembly</span>
+      <span class="machine_separator">·</span>
+      <span>x86_64</span>
+      <span class="machine_separator">·</span>
+      <span>64 MB RAM</span>
+    </div>
+    <div id="runtime_state" class="runtime_state">
+      <span class="runtime_dot"></span>
+      <span id="runtime_label">Starting</span>
+    </div>
+  </header>
+  <main id="workspace">
+    <section id="terminal_panel" aria-label="Safir OS terminal">
+      <div class="terminal_toolbar">
+        <div class="terminal_window_controls">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div class="terminal_title">safiros — terminal</div>
+        <div class="terminal_toolbar_right">CONSOLE</div>
+      </div>
+      <div id="terminal_mount"></div>
+    </section>
+  </main>
+  <footer id="statusbar">
+    <div class="statusbar_left">
+      <span class="statusbar_item"><span class="statusbar_dot"></span> Virtual machine</span>
+      <span class="statusbar_divider"></span>
+      <span id="status">Initializing emulator...</span>
+    </div>
+    <div class="statusbar_right">SafirOS x86-64</div>
+  </footer>
+</div>
 <div id="boot_screen">
   <img class="safiros_logo" src="safiros-logo.svg" alt="Safir OS">
   <div id="boot_title">Safir OS</div>
-  <div id="status">Safir OSを起動しています...</div>
+  <div id="boot_subtitle">Starting virtual machine</div>
   <div class="progress"><div id="progress_bar"></div></div>
-</div>
-<div id="screen_container" aria-label="Safir OS">
-  <pre id="serial_console"></pre>
 </div>
 <script src="app.js"></script>
 </body>
