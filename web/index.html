@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#111827">
+<meta name="theme-color" content="#000000">
 <title>Safir OS</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
@@ -47,18 +47,11 @@ window.addEventListener("error",event=>{
   const message=event.error&&event.error.message
     ?event.error.message
     :event.message;
-
   const status=document.getElementById("status");
   const subtitle=document.getElementById("boot_subtitle");
-
   if(message){
-    if(status){
-      status.textContent="Browser error: "+message;
-    }
-
-    if(subtitle){
-      subtitle.textContent="Browser error: "+message;
-    }
+    if(status) status.textContent="Browser error: "+message;
+    if(subtitle) subtitle.textContent="Browser error: "+message;
   }
 });
 
@@ -66,70 +59,19 @@ window.addEventListener("unhandledrejection",event=>{
   const reason=event.reason&&event.reason.message
     ?event.reason.message
     :String(event.reason);
-
   const status=document.getElementById("status");
   const subtitle=document.getElementById("boot_subtitle");
-
-  if(status){
-    status.textContent="Startup error: "+reason;
-  }
-
-  if(subtitle){
-    subtitle.textContent="Startup error: "+reason;
-  }
+  if(status) status.textContent="Startup error: "+reason;
+  if(subtitle) subtitle.textContent="Startup error: "+reason;
 });
 </script>
 </head>
 <body>
-<div id="app_shell">
-  <header id="topbar">
-    <div class="brand">
-      <div class="brand_icon">S</div>
-      <div class="brand_name">Safir OS</div>
-      <span class="brand_tag">WEB VM</span>
-    </div>
-    <div class="machine_info">
-      <span class="machine_dot"></span>
-      <span>QEMU / WebAssembly</span>
-      <span class="machine_separator">·</span>
-      <span>x86_64</span>
-      <span class="machine_separator">·</span>
-      <span>64 MB RAM</span>
-    </div>
-    <div id="runtime_state" class="runtime_state">
-      <span class="runtime_dot"></span>
-      <span id="runtime_label">Starting</span>
-    </div>
-  </header>
-  <main id="workspace">
-    <section id="terminal_panel" aria-label="Safir OS terminal">
-      <div class="terminal_toolbar">
-        <div class="terminal_window_controls">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-        <div class="terminal_title">safiros — terminal</div>
-        <div class="terminal_toolbar_right">CONSOLE</div>
-      </div>
-      <div id="terminal_mount"></div>
-    </section>
-  </main>
-  <footer id="statusbar">
-    <div class="statusbar_left">
-      <span class="statusbar_item"><span class="statusbar_dot"></span> Virtual machine</span>
-      <span class="statusbar_divider"></span>
-      <span id="status">Initializing emulator...</span>
-    </div>
-    <div class="statusbar_right">SafirOS x86-64</div>
-  </footer>
-</div>
-<div id="boot_screen">
-  <img class="safiros_logo" src="safiros-logo.svg" alt="Safir OS">
-  <div id="boot_title">Safir OS</div>
-  <div id="boot_subtitle">Starting virtual machine</div>
-  <div class="progress"><div id="progress_bar"></div></div>
-</div>
+<main id="terminal_mount" aria-label="Safir OS terminal"></main>
+<div id="status" hidden></div>
+<div id="progress_bar" hidden></div>
+<div id="runtime_state" hidden><span id="runtime_label"></span></div>
+<div id="boot_screen" hidden><div id="boot_subtitle"></div></div>
 <script src="app.js"></script>
 </body>
 </html>
