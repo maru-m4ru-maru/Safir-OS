@@ -146,7 +146,7 @@ pub fn console_init() {
 
 pub fn console_clear() {
     #[cfg(target_os = "none")]
-    for byte in b"\\x1B[2J\\x1B[H" {
+    for byte in b"\x1B[2J\x1B[H" {
         serial_write_byte(*byte);
     }
 
