@@ -15,6 +15,10 @@ start:
 
     mov [boot_drive], dl
 
+    call serial_init
+    mov si, boot_message
+    call serial_print16
+
     mov ax, KERNEL_LOAD_SEGMENT
     mov es, ax
     xor bx, bx
@@ -83,9 +87,13 @@ start:
     jmp disk_error
 
 kernel_loaded:
+    mov si, kernel_loaded_message
+    call serial_print16
     jmp KERNEL_LOAD_SEGMENT:0x0000
 
 disk_error:
+    mov si, disk_error_serial_message
+    call serial_print16
 %ifdef SAFIROS_QEMU_TEST
     mov al, 'D'
     out 0xE9, al
@@ -107,6 +115,52 @@ disk_error:
     cli
     hlt
     jmp .halt
+
+serial_init:
+    mov dx, 0x3F9
+    xor al, al
+    out dx, al
+    mov dx, 0x3FB
+    mov al, 0x80
+    out dx, al
+    mov dx, 0x3F8
+    mov al, 0x03
+    out dx, al
+    mov dx, 0x3F9
+    xor al, al
+    out dx, al
+    mov dx, 0x3FB
+    mov al, 0x03
+    out dx, al
+    mov dx, 0x3FA
+    mov al, 0xC7
+    out dx, al
+    mov dx, 0x3FC
+    mov al, 0x0B
+    out dx, al
+    ret
+
+serial_print16:
+.next:
+    lodsb
+    test al, al
+    jz .done
+    push ax
+.wait:
+    mov dx, 0x3FD
+    in al, dx
+    test al, 0x20
+    jz .wait
+    pop ax
+    mov dx, 0x3F8
+    out dx, al
+    jmp .next
+.done:
+    ret
+
+boot_message db "BOOT: BIOS boot sector entered", 13, 10, 0
+kernel_loaded_message db "BOOT: kernel image loaded", 13, 10, 0
+disk_error_serial_message db "BOOT ERROR: kernel disk read failed", 13, 10, 0
 
 boot_drive db 0
 current_sector db 0
