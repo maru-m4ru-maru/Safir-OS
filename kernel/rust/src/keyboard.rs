@@ -237,6 +237,16 @@ impl<const N: usize> KeyboardInput<N> {
         self.buffer.push(byte)
     }
 
+    pub fn feed_serial_byte(&mut self, byte: u8) -> bool {
+        let byte = match byte {
+            b'\\r' | b'\\n' => b'\\n',
+            0x7F => 0x08,
+            value => value,
+        };
+
+        self.buffer.push(byte)
+    }
+
     pub fn pop(&mut self) -> Option<u8> {
         self.buffer.pop()
     }
@@ -268,8 +278,8 @@ pub unsafe extern "C" fn keyboard_irq(scancode: u8) -> u64 {
 }
 
 #[cfg(not(feature = "host-test"))]
-fn serial_pop_byte() -> Option<u8> {
-    unsafe {
+unsafe fn drain_serial_input<const N: usize>(input: &mut KeyboardInput<N>) {
+    loop {
         let status: u8;
 
         asm!(
@@ -279,8 +289,8 @@ fn serial_pop_byte() -> Option<u8> {
             options(nomem, nostack, preserves_flags)
         );
 
-        if status & 0x01 == 0 {
-            return None;
+        if status & 0x01 == 0 || input.is_full() {
+            break;
         }
 
         let byte: u8;
@@ -292,11 +302,7 @@ fn serial_pop_byte() -> Option<u8> {
             options(nomem, nostack, preserves_flags)
         );
 
-        Some(match byte {
-            b'\\r' | b'\\n' => b'\\n',
-            0x7F => 0x08,
-            value => value,
-        })
+        let _ = input.feed_serial_byte(byte);
     }
 }
 
@@ -314,7 +320,8 @@ pub fn pop_byte() -> Option<u8> {
         asm!("cli", options(nomem, nostack, preserves_flags));
 
         let input = &mut *core::ptr::addr_of_mut!(KEYBOARD_INPUT);
-        let byte = input.pop().or_else(serial_pop_byte);
+        drain_serial_input(input);
+        let byte = input.pop();
 
         if flags & 0x200 != 0 {
             asm!("sti", options(nomem, nostack, preserves_flags));
