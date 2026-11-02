@@ -1,19 +1,76 @@
 "use strict";
 
 const status=document.getElementById("status");
-const serialConsole=document.getElementById("serial_console");
 const progressBar=document.getElementById("progress_bar");
 const bootScreen=document.getElementById("boot_screen");
+const bootSubtitle=document.getElementById("boot_subtitle");
+const runtimeState=document.getElementById("runtime_state");
+const runtimeLabel=document.getElementById("runtime_label");
+const terminalMount=document.getElementById("terminal_mount");
 
 const siteBase=window.SAFIROS_BASE||"./";
 const qemuBase=siteBase+"qemu/";
-
 const expected="SafirOS 64-bit Long Mode";
-let serialOutput="";
+
+let guestOutput="";
 let ptyMaster=null;
-let ptyOutputListener=null;
+let ptyActivated=false;
 let lastDependencyCount=-1;
-const serialDecoder=new TextDecoder();
+
+const guestDecoder=new TextDecoder();
+
+const terminal=new Terminal({
+  allowTransparency:false,
+  convertEol:true,
+  cursorBlink:true,
+  cursorStyle:"bar",
+  fontFamily:'"Cascadia Code","SFMono-Regular",Consolas,monospace',
+  fontSize:14,
+  lineHeight:1.35,
+  scrollback:10000,
+  theme:{
+    background:"#101318",
+    foreground:"#dce3ed",
+    cursor:"#e2eaf5",
+    cursorAccent:"#101318",
+    selectionBackground:"#33445d",
+    black:"#171b22",
+    red:"#e06c75",
+    green:"#98c379",
+    yellow:"#e5c07b",
+    blue:"#61afef",
+    magenta:"#c678dd",
+    cyan:"#56b6c2",
+    white:"#dce3ed",
+    brightBlack:"#5c6370",
+    brightRed:"#e06c75",
+    brightGreen:"#98c379",
+    brightYellow:"#e5c07b",
+    brightBlue:"#61afef",
+    brightMagenta:"#c678dd",
+    brightCyan:"#56b6c2",
+    brightWhite:"#ffffff"
+  }
+});
+
+const fitAddon=new FitAddon.FitAddon();
+terminal.loadAddon(fitAddon);
+terminal.open(terminalMount);
+
+function fitTerminal(){
+  try{
+    fitAddon.fit();
+  }catch(error){
+    console.warn("Terminal resize failed",error);
+  }
+}
+
+window.addEventListener("resize",fitTerminal);
+requestAnimationFrame(fitTerminal);
+
+terminalMount.addEventListener("mousedown",()=>{
+  terminal.focus();
+});
 
 window.addEventListener("keydown",event=>{
   if(event.ctrlKey&&event.shiftKey&&event.code==="KeyR"){
@@ -23,13 +80,57 @@ window.addEventListener("keydown",event=>{
   }
 },true);
 
+function setStatus(message){
+  status.textContent=message;
+  if(bootSubtitle&&bootScreen.isConnected){
+    bootSubtitle.textContent=message;
+  }
+}
+
+function setRuntimeState(label,state){
+  runtimeLabel.textContent=label;
+  runtimeState.dataset.state=state;
+}
+
+function setProgress(value){
+  const progress=Math.max(0,Math.min(100,value));
+  progressBar.style.width=progress+"%";
+}
+
+function recordGuestOutput(data){
+  if(!data){
+    return;
+  }
+
+  guestOutput=(guestOutput+data).slice(-30000);
+
+  if(bootScreen.isConnected){
+    bootScreen.remove();
+    terminal.focus();
+  }
+
+  if(guestOutput.includes(expected)){
+    setProgress(100);
+    setStatus("SafirOS kernel reached Long Mode");
+    setRuntimeState("Running","running");
+  }
+}
+
+function appendSerial(data){
+  const output=typeof data==="string"
+    ?data
+    :String(data);
+
+  terminal.write(output);
+}
+
 window.addEventListener("error",event=>{
   const message=event.error&&event.error.message
     ?event.error.message
     :event.message;
 
   if(message){
-    appendSerial("[browser] "+message+"\n");
+    appendSerial("\r\n[browser] "+message+"\r\n");
   }
 });
 
@@ -38,54 +139,26 @@ window.addEventListener("unhandledrejection",event=>{
     ?event.reason.message
     :String(event.reason);
 
-  appendSerial("[promise] "+reason+"\n");
+  appendSerial("\r\n[promise] "+reason+"\r\n");
 });
-
-function setStatus(message){
-  status.textContent=message;
-}
-
-function setProgress(value){
-  const progress=Math.max(0,Math.min(100,value));
-  progressBar.style.width=progress+"%";
-}
-
-function appendSerial(data){
-  if(typeof data!=="string"){
-    data=String(data);
-  }
-
-  serialOutput+=data;
-  serialConsole.textContent=serialOutput.slice(-12000);
-  serialConsole.scrollTop=serialConsole.scrollHeight;
-
-  if(serialOutput.includes(expected)){
-    setProgress(100);
-    setStatus("Safir OS 起動完了");
-
-    setTimeout(()=>{
-      bootScreen.remove();
-    },500);
-  }
-}
 
 const moduleConfig=window.Module;
 
 moduleConfig.print=data=>{
-  appendSerial(data);
+  appendSerial(String(data)+"\r\n");
 };
 
 moduleConfig.printErr=data=>{
-  appendSerial(data);
+  appendSerial(String(data)+"\r\n");
 };
 
 moduleConfig.monitorRunDependencies=count=>{
   lastDependencyCount=count;
 
   if(count>0){
-    setStatus("QEMU依存リソースを読み込んでいます... 残り "+count);
+    setStatus("Loading QEMU resources · "+count+" remaining");
   }else if(count===0){
-    setStatus("QEMU依存リソース読込完了。SafirOSの起動ログを待っています...");
+    setStatus("QEMU resources ready · waiting for guest output");
   }
 };
 
@@ -94,7 +167,8 @@ moduleConfig.onAbort=reason=>{
     ?reason.message
     :String(reason);
 
-  appendSerial("[QEMU abort] "+message+"\n");
+  appendSerial("\r\n[QEMU abort] "+message+"\r\n");
+  setRuntimeState("Error","error");
 };
 
 moduleConfig.setStatus=message=>{
@@ -103,7 +177,7 @@ moduleConfig.setStatus=message=>{
   }
 
   if(lastDependencyCount===0){
-    setStatus("QEMU依存リソース読込完了。SafirOSの起動ログを待っています...");
+    setStatus("QEMU resources ready · waiting for guest output");
     return;
   }
 
@@ -132,7 +206,7 @@ moduleConfig.preRun.push(module=>{
       );
     })
     .catch(error=>{
-      appendSerial("[disk] "+error.message+"\n");
+      appendSerial("\r\n[disk] "+error.message+"\r\n");
       throw error;
     })
     .finally(()=>{
@@ -140,9 +214,31 @@ moduleConfig.preRun.push(module=>{
     });
 });
 
+function createTerminalAdapter(){
+  return {
+    write(data,onConsumed){
+      const output=typeof data==="string"
+        ?data
+        :guestDecoder.decode(data,{stream:true});
+
+      recordGuestOutput(output);
+      terminal.write(data,onConsumed);
+    },
+    onData(callback){
+      return terminal.onData(callback);
+    },
+    onBinary(callback){
+      return terminal.onBinary(callback);
+    },
+    onResize(callback){
+      return terminal.onResize(callback);
+    }
+  };
+}
+
 async function waitForRuntime(startedAt){
   while(true){
-    if(serialOutput.includes(expected)){
+    if(guestOutput.includes(expected)){
       return;
     }
 
@@ -150,7 +246,7 @@ async function waitForRuntime(startedAt){
       throw new Error(
         "Long Mode到達ログを受信できませんでした。依存残り="+lastDependencyCount+
         "、PTY="+String(Boolean(ptyMaster))+
-        "、PTY出力監視="+String(Boolean(ptyOutputListener))+
+        "、PTY有効化="+String(ptyActivated)+
         "、SharedArrayBuffer="+String(typeof SharedArrayBuffer!=="undefined")+
         "、crossOriginIsolated="+String(window.crossOriginIsolated)
       );
@@ -162,19 +258,24 @@ async function waitForRuntime(startedAt){
 
 async function boot(){
   try{
-    setStatus("ブラウザ実行環境を確認しています...");
+    setRuntimeState("Starting","starting");
+    setStatus("Checking browser runtime...");
     setProgress(5);
 
     if(typeof SharedArrayBuffer==="undefined"){
-      throw new Error("SharedArrayBufferが利用できません");
+      throw new Error("SharedArrayBuffer is unavailable");
     }
 
     if(!window.crossOriginIsolated){
-      throw new Error("crossOriginIsolatedが有効になっていません");
+      throw new Error("crossOriginIsolated is not enabled");
     }
 
     if(typeof openpty!=="function"){
-      throw new Error("QEMU用PTYの初期化に失敗しました");
+      throw new Error("QEMU PTY is unavailable");
+    }
+
+    if(typeof Terminal!=="function"||typeof FitAddon==="undefined"){
+      throw new Error("Terminal emulator assets are unavailable");
     }
 
     const pty=openpty();
@@ -182,44 +283,25 @@ async function boot(){
     moduleConfig.pty=pty.slave;
 
     if(!moduleConfig.pty||typeof moduleConfig.pty.onSignal!=="function"){
-      throw new Error("QEMU用PTY slaveの初期化に失敗しました");
+      throw new Error("QEMU PTY slave initialization failed");
     }
 
-    ptyOutputListener=ptyMaster.onWrite(([data,onConsumed])=>{
-      try{
-        const bytes=data instanceof Uint8Array
-          ?data
-          :new Uint8Array(data);
+    const termios=moduleConfig.pty.ioctl("TCGETS");
+    termios.iflag|=0x0100;
+    termios.lflag&=~(0x0002|0x0008);
+    moduleConfig.pty.ioctl("TCSETS",termios);
 
-        const output=serialDecoder.decode(bytes,{stream:true});
+    ptyMaster.activate(createTerminalAdapter());
+    ptyActivated=true;
 
-        if(output.length>0&&bootScreen.isConnected){
-          bootScreen.remove();
-        }
+    appendSerial("[webvm] Terminal connected to QEMU serial console\r\n");
 
-        appendSerial(output);
-      }finally{
-        if(typeof onConsumed==="function"){
-          onConsumed();
-        }
-      }
-    });
-
-    appendSerial("[boot] PTY master output listener connected\n");
-
-    setProgress(10);
-
-    setStatus("QEMU ROMデータを確認しています...");
     setProgress(15);
-
-    appendSerial(
-      "[boot] PTY initialized="+String(Boolean(moduleConfig.pty))+
-      ", onSignal="+String(typeof moduleConfig.pty.onSignal==="function")+"\n"
-    );
+    setStatus("Loading QEMU ROM resources...");
 
     const {default:initEmscriptenModule}=await import(qemuBase+"out.js");
 
-    setStatus("QEMU Wasmを起動しています...");
+    setStatus("Starting QEMU WebAssembly...");
     setProgress(40);
 
     await initEmscriptenModule(moduleConfig);
@@ -236,16 +318,23 @@ async function boot(){
         return oldPoll.call(stream,timeout);
       };
 
-      appendSerial("[boot] PTY poll connected\n");
+      appendSerial("[webvm] PTY polling enabled\r\n");
     }
 
-    setStatus("QEMU初期化完了。SafirOSの起動ログを受信しています...");
+    fitTerminal();
+    terminal.focus();
+
+    setStatus("QEMU initialized · waiting for SafirOS");
     await waitForRuntime(performance.now());
 
     setProgress(100);
+    setRuntimeState("Running","running");
+    setStatus("SafirOS kernel reached Long Mode");
+    terminal.focus();
   }catch(error){
-    appendSerial("[boot error] "+error.message+"\n");
-    setStatus("Safir OS 起動未確認\n"+error.message);
+    appendSerial("\r\n[boot error] "+error.message+"\r\n");
+    setStatus("SafirOS startup failed · "+error.message);
+    setRuntimeState("Error","error");
   }
 }
 
