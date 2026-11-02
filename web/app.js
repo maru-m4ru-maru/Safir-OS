@@ -259,8 +259,14 @@ async function waitForRuntime(startedAt){
 async function boot(){
   try{
     setRuntimeState("Starting","starting");
-    setStatus("Checking browser runtime...");
+    setStatus("Loading QEMU ROM loader...");
     setProgress(5);
+
+    if(!window.SAFIROS_ROM_READY){
+      throw new Error("QEMU ROM loader was not configured");
+    }
+
+    await window.SAFIROS_ROM_READY;
 
     if(typeof SharedArrayBuffer==="undefined"){
       throw new Error("SharedArrayBuffer is unavailable");
