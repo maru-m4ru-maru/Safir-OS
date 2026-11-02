@@ -35,7 +35,49 @@ window.Module={
 };
 </script>
 <script>
-document.write('<script src="'+window.SAFIROS_BASE+'qemu/load-rom.js"><\\/script>');
+window.SAFIROS_ROM_READY=new Promise((resolve,reject)=>{
+  const script=document.createElement("script");
+  script.src=window.SAFIROS_BASE+"qemu/load-rom.js";
+  script.onload=resolve;
+  script.onerror=()=>reject(new Error("Failed to load QEMU ROM loader"));
+  document.head.appendChild(script);
+});
+
+window.addEventListener("error",event=>{
+  const message=event.error&&event.error.message
+    ?event.error.message
+    :event.message;
+
+  const status=document.getElementById("status");
+  const subtitle=document.getElementById("boot_subtitle");
+
+  if(message){
+    if(status){
+      status.textContent="Browser error: "+message;
+    }
+
+    if(subtitle){
+      subtitle.textContent="Browser error: "+message;
+    }
+  }
+});
+
+window.addEventListener("unhandledrejection",event=>{
+  const reason=event.reason&&event.reason.message
+    ?event.reason.message
+    :String(event.reason);
+
+  const status=document.getElementById("status");
+  const subtitle=document.getElementById("boot_subtitle");
+
+  if(status){
+    status.textContent="Startup error: "+reason;
+  }
+
+  if(subtitle){
+    subtitle.textContent="Startup error: "+reason;
+  }
+});
 </script>
 </head>
 <body>
