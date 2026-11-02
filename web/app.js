@@ -191,7 +191,13 @@ async function boot(){
           ?data
           :new Uint8Array(data);
 
-        appendSerial(serialDecoder.decode(bytes,{stream:true}));
+        const output=serialDecoder.decode(bytes,{stream:true});
+
+        if(output.length>0&&bootScreen.isConnected){
+          bootScreen.remove();
+        }
+
+        appendSerial(output);
       }finally{
         if(typeof onConsumed==="function"){
           onConsumed();
@@ -238,6 +244,7 @@ async function boot(){
 
     setProgress(100);
   }catch(error){
+    appendSerial("[boot error] "+error.message+"\n");
     setStatus("Safir OS 起動未確認\n"+error.message);
   }
 }
