@@ -1,26 +1,24 @@
 "use strict";
 
+const status=document.getElementById("status");
 const progressBar=document.getElementById("progress_bar");
 const bootScreen=document.getElementById("boot_screen");
 const bootSubtitle=document.getElementById("boot_subtitle");
 const runtimeState=document.getElementById("runtime_state");
 const runtimeLabel=document.getElementById("runtime_label");
-const footerStatus=document.getElementById("footer_status");
 const terminalMount=document.getElementById("terminal_mount");
-const terminalDimensions=document.getElementById("terminal_dimensions");
 
 const siteBase=window.SAFIROS_BASE||"./";
 const qemuBase=siteBase+"qemu/";
 const expected="SafirOS 64-bit Long Mode";
+const shellPrompt="safiros> ";
 
 let guestOutput="";
 let ptyMaster=null;
 let ptyActivated=false;
 let lastDependencyCount=-1;
-let resizeFrame=0;
 
 const guestDecoder=new TextDecoder();
-const fitAddon=new FitAddon.FitAddon();
 
 const terminal=new Terminal({
   allowTransparency:false,
@@ -31,44 +29,38 @@ const terminal=new Terminal({
   cursorStyle:"bar",
   fontFamily:'ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace',
   fontSize:14,
-  lineHeight:1.25,
-  scrollback:3000,
+  scrollback:10000,
   theme:{
-    background:"#070b12",
-    foreground:"#dce5f0",
-    cursor:"#8ab4f8",
-    cursorAccent:"#070b12",
-    selectionBackground:"#27486a",
-    selectionForeground:"#ffffff",
-    black:"#070b12",
-    red:"#f28b82",
-    green:"#81c995",
-    yellow:"#fdd663",
-    blue:"#8ab4f8",
-    magenta:"#c7a4e8",
-    cyan:"#78c7d4",
-    white:"#dce5f0",
-    brightBlack:"#74849a",
-    brightRed:"#f6a09a",
-    brightGreen:"#a2d8ae",
-    brightYellow:"#ffe18a",
-    brightBlue:"#a8c8fa",
-    brightMagenta:"#d8b9f1",
-    brightCyan:"#97d8e2",
+    background:"#000000",
+    foreground:"#ffffff",
+    cursor:"#ffffff",
+    cursorAccent:"#000000",
+    selectionBackground:"#ffffff",
+    selectionForeground:"#000000",
+    black:"#000000",
+    red:"#ffffff",
+    green:"#ffffff",
+    yellow:"#ffffff",
+    blue:"#ffffff",
+    magenta:"#ffffff",
+    cyan:"#ffffff",
+    white:"#ffffff",
+    brightBlack:"#ffffff",
+    brightRed:"#ffffff",
+    brightGreen:"#ffffff",
+    brightYellow:"#ffffff",
+    brightBlue:"#ffffff",
+    brightMagenta:"#ffffff",
+    brightCyan:"#ffffff",
     brightWhite:"#ffffff"
   }
 });
 
-terminal.loadAddon(fitAddon);
 terminal.open(terminalMount);
-terminal.onResize(({cols,rows})=>{
-  terminalDimensions.textContent=cols+" × "+rows;
-});
 
-const imeInputPatchInstalled=Boolean(
-  window.SafirOSImeFix &&
-  window.SafirOSImeFix.install(terminal)
-);
+const keyboardInput=window.SafirOSKeyboardInput
+  ?window.SafirOSKeyboardInput.install(terminal,{enabled:false})
+  :null;
 
 const originalTerminalWrite=terminal.write.bind(terminal);
 terminal.write=function(data,onWrite){
@@ -80,13 +72,14 @@ terminal.write=function(data,onWrite){
   return originalTerminalWrite(data,onWrite);
 };
 
-terminalMount.addEventListener("pointerdown",()=>{
-  terminal.focus();
+terminalMount.addEventListener("mousedown",()=>{
+  if(keyboardInput&&keyboardInput.enabled){
+    keyboardInput.focus();
+  }
 });
 
-
 function setStatus(message){
-  footerStatus.textContent=message;
+  status.textContent=message;
   if(bootSubtitle&&bootScreen.isConnected){
     bootSubtitle.textContent=message;
   }
@@ -109,15 +102,19 @@ function recordGuestOutput(data){
 
   guestOutput=(guestOutput+data).slice(-30000);
 
-  if(guestOutput.includes(expected)){
-    if(bootScreen.isConnected){
-      bootScreen.remove();
-    }
-    terminalMount.classList.remove("is-booting");
+  if(bootScreen.isConnected){
+    bootScreen.remove();
+  }
 
+  if(guestOutput.includes(expected)){
     setProgress(100);
-    setStatus("Kernel reached Long Mode");
+    setStatus("SafirOS kernel reached Long Mode");
     setRuntimeState("Running","running");
+  }
+
+  if(guestOutput.includes(shellPrompt)&&keyboardInput&&!keyboardInput.enabled){
+    keyboardInput.setEnabled(true);
+    keyboardInput.focus();
   }
 }
 
@@ -128,24 +125,6 @@ function appendSerial(data){
 
   terminal.write(output);
 }
-
-function fitTerminal(){
-  if(!ptyActivated||resizeFrame){
-    return;
-  }
-
-  resizeFrame=requestAnimationFrame(()=>{
-    resizeFrame=0;
-
-    try{
-      fitAddon.fit();
-    }catch(error){
-      appendSerial("\r\n[terminal resize] "+error.message+"\r\n");
-    }
-  });
-}
-
-window.addEventListener("resize",fitTerminal);
 
 window.addEventListener("error",event=>{
   const message=event.error&&event.error.message
@@ -263,8 +242,8 @@ async function boot(){
     setStatus("Enabling shared memory...");
     setProgress(2);
 
-    if(!imeInputPatchInstalled){
-      throw new Error("xterm.js IME compatibility patch is unavailable");
+    if(!keyboardInput){
+      throw new Error("Independent keyboard input bridge is unavailable");
     }
 
     if(!window.COI_READY){
@@ -294,10 +273,6 @@ async function boot(){
       throw new Error("Terminal emulator assets are unavailable");
     }
 
-    if(!window.FitAddon||typeof window.FitAddon.FitAddon!=="function"){
-      throw new Error("xterm.js FitAddon is unavailable");
-    }
-
     const pty=openpty();
     ptyMaster=pty.master;
     moduleConfig.pty=pty.slave;
@@ -313,7 +288,6 @@ async function boot(){
 
     terminal.loadAddon(ptyMaster);
     ptyActivated=true;
-    fitTerminal();
 
     appendSerial("[webvm] Terminal connected to QEMU serial console\r\n");
 
@@ -340,24 +314,20 @@ async function boot(){
       };
     }
 
-    terminal.focus();
-
     setStatus("QEMU initialized · waiting for SafirOS");
     await waitForRuntime(performance.now());
 
     setProgress(100);
     setRuntimeState("Running","running");
-    setStatus("Kernel reached Long Mode");
-    terminal.focus();
+    setStatus("SafirOS kernel reached Long Mode");
+
+    if(keyboardInput.enabled){
+      keyboardInput.focus();
+    }
   }catch(error){
     appendSerial("\r\n[boot error] "+error.message+"\r\n");
-    if(bootScreen.isConnected){
-      bootScreen.remove();
-    }
-    terminalMount.classList.remove("is-booting");
     setStatus("SafirOS startup failed · "+error.message);
     setRuntimeState("Error","error");
-    terminal.focus();
   }
 }
 
