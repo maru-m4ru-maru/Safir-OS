@@ -5,15 +5,15 @@ const { master, slave } = openpty();
 
 const termios = slave.ioctl("TCGETS");
 termios.iflag |= 0x0100;
-termios.lflag |= 0x0002 | 0x0008;
+termios.lflag &= ~(0x0002 | 0x0008);
 slave.ioctl("TCSETS", termios);
 
 let sendData;
-let echoed = "";
+let terminalOutput = "";
 
 master.activate({
   write(data, callback) {
-    echoed += Buffer.from(data).toString("utf8");
+    terminalOutput += Buffer.from(data).toString("utf8");
     if (callback) callback();
   },
   onData(callback) {
@@ -32,31 +32,36 @@ assert.equal(typeof sendData, "function");
 
 for (const character of "help") {
   sendData(character);
+  assert.equal(slave.readable, true);
+  assert.equal(
+    Buffer.from(slave.read()).toString("ascii"),
+    character
+  );
 }
 
-assert.equal(slave.readable, false);
-assert.equal(echoed, "help");
+assert.equal(terminalOutput, "");
 
 sendData("\r");
-
 assert.equal(slave.readable, true);
 assert.equal(
   Buffer.from(slave.read()).toString("ascii"),
-  "help\n"
+  "\n"
 );
-assert.equal(slave.readable, false);
-assert.equal(echoed, "help\r\n");
 
-for (const character of "about") {
-  sendData(character);
-}
-sendData("\r");
-
+sendData("about");
+assert.equal(slave.readable, true);
 assert.equal(
   Buffer.from(slave.read()).toString("ascii"),
-  "about\n"
+  "about"
+);
+
+sendData("\x7f");
+assert.equal(slave.readable, true);
+assert.equal(
+  Buffer.from(slave.read()).toString("hex"),
+  "7f"
 );
 
 master.dispose();
 
-process.stdout.write("Browser PTY canonical input and terminal echo passed.\n");
+process.stdout.write("Browser PTY raw input forwarding passed.\n");
