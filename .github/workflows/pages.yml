@@ -35,7 +35,7 @@ jobs:
       - name: Install terminal emulator
         run: |
           mkdir -p build/xterm site/terminal
-          npm install --prefix build/xterm --no-save --no-package-lock @xterm/xterm@5.5.0 @xterm/addon-fit@0.10.0
+          npm install --prefix build/xterm --no-save --no-package-lock @xterm/xterm@5.5.0
           cp build/xterm/node_modules/@xterm/xterm/lib/xterm.js site/terminal/xterm.js
           cp build/xterm/node_modules/@xterm/xterm/css/xterm.css site/terminal/xterm.css
           cp build/xterm/node_modules/@xterm/addon-fit/lib/addon-fit.js site/terminal/addon-fit.js
