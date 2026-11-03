@@ -44,7 +44,60 @@
 
   const scriptUrl = document.currentScript.src;
   const scope = new URL("./", scriptUrl).pathname;
-  const reloadKey = "safiros-coi-reload-v2";
+  const reloadKey = "safiros-coi-reload-v3";
+
+  function waitForController(timeoutMs) {
+    if (navigator.serviceWorker.controller) {
+      return Promise.resolve(navigator.serviceWorker.controller);
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        navigator.serviceWorker.removeEventListener(
+          "controllerchange",
+          checkController
+        );
+        reject(new Error(
+          "The COI service worker is active but does not control this page. " +
+          "Check the site's service-worker permission. Scope=" + scope
+        ));
+      }, timeoutMs);
+
+      function checkController() {
+        const controller = navigator.serviceWorker.controller;
+        if (!controller) {
+          return;
+        }
+
+        clearTimeout(timeout);
+        navigator.serviceWorker.removeEventListener(
+          "controllerchange",
+          checkController
+        );
+        resolve(controller);
+      }
+
+      navigator.serviceWorker.addEventListener(
+        "controllerchange",
+        checkController
+      );
+      checkController();
+    });
+  }
+
+  async function inspectIsolationHeaders() {
+    const response = await fetch(location.href, {
+      cache: "no-store",
+      credentials: "same-origin"
+    });
+
+    return {
+      status: response.status,
+      coop: response.headers.get("Cross-Origin-Opener-Policy"),
+      coep: response.headers.get("Cross-Origin-Embedder-Policy"),
+      corp: response.headers.get("Cross-Origin-Resource-Policy")
+    };
+  }
 
   window.COI_READY = (async () => {
     if (
@@ -65,36 +118,25 @@
 
     const registration = await navigator.serviceWorker.register(
       scriptUrl,
-      { scope }
+      {
+        scope,
+        updateViaCache: "none"
+      }
     );
 
     await Promise.race([
       navigator.serviceWorker.ready,
       new Promise((_, reject) => {
         setTimeout(
-          () => reject(new Error("Timed out waiting for the COI service worker")),
+          () => reject(new Error(
+            "Timed out waiting for the COI service worker"
+          )),
           20000
         );
       })
     ]);
 
-    const worker = registration.installing || registration.waiting;
-    if (worker) {
-      await new Promise((resolve, reject) => {
-        const checkState = () => {
-          if (worker.state === "activated") {
-            worker.removeEventListener("statechange", checkState);
-            resolve();
-          } else if (worker.state === "redundant") {
-            worker.removeEventListener("statechange", checkState);
-            reject(new Error("The COI service worker became redundant"));
-          }
-        };
-
-        worker.addEventListener("statechange", checkState);
-        checkState();
-      });
-    }
+    await waitForController(15000);
 
     if (
       window.crossOriginIsolated &&
@@ -104,10 +146,34 @@
       return true;
     }
 
+    const headers = await inspectIsolationHeaders();
+
+    if (
+      headers.coop !== "same-origin" ||
+      headers.coep !== "require-corp"
+    ) {
+      if (sessionStorage.getItem(reloadKey) === "1") {
+        throw new Error(
+          "The COI service worker controls this page, but the required " +
+          "response headers are missing. HTTP=" + headers.status +
+          ", COOP=" + String(headers.coop) +
+          ", COEP=" + String(headers.coep) +
+          ", scope=" + scope
+        );
+      }
+
+      sessionStorage.setItem(reloadKey, "1");
+      window.location.reload();
+      return new Promise(() => {});
+    }
+
     if (sessionStorage.getItem(reloadKey) === "1") {
       throw new Error(
-        "The COI service worker is active, but this page is still not isolated. " +
-        "Check whether service workers are blocked for this site."
+        "COOP and COEP headers are present, but this document is still " +
+        "not cross-origin isolated. HTTP=" + headers.status +
+        ", COOP=" + String(headers.coop) +
+        ", COEP=" + String(headers.coep) +
+        ", controller=" + String(Boolean(navigator.serviceWorker.controller))
       );
     }
 
