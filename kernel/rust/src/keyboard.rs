@@ -270,7 +270,7 @@ impl<const N: usize> KeyboardInput<N> {
 
     pub fn feed_serial_byte(&mut self, byte: u8) -> bool {
         let byte = match byte {
-            b'\\r' | b'\\n' => b'\\n',
+            b'\r' | b'\n' => b'\n',
             0x7F => 0x08,
             value => value,
         };
