@@ -230,7 +230,8 @@ pub struct KeyInput {
 
 pub struct KeyboardInput<const N: usize> {
     decoder: KeyboardDecoder,
-    buffer: RingBuffer<KeyInput>,
+    buffer: RingBuffer<N>,
+    sources: RingBuffer<N>,
 }
 
 impl<const N: usize> KeyboardInput<N> {
@@ -238,7 +239,25 @@ impl<const N: usize> KeyboardInput<N> {
         Self {
             decoder: KeyboardDecoder::new(),
             buffer: RingBuffer::new(),
+            sources: RingBuffer::new(),
         }
+    }
+
+    fn push_event(&mut self, byte: u8, source: InputSource) -> bool {
+        if self.buffer.is_full() || self.sources.is_full() {
+            return false;
+        }
+
+        let source_byte = match source {
+            InputSource::Ps2 => 0,
+            InputSource::Serial => 1,
+        };
+
+        let byte_pushed = self.buffer.push(byte);
+        let source_pushed = self.sources.push(source_byte);
+
+        debug_assert_eq!(byte_pushed, source_pushed);
+        byte_pushed && source_pushed
     }
 
     pub fn feed_scancode(&mut self, scancode: u8) -> bool {
@@ -246,27 +265,29 @@ impl<const N: usize> KeyboardInput<N> {
             return false;
         };
 
-        self.buffer.push(KeyInput {
-            byte,
-            source: InputSource::Ps2,
-        })
+        self.push_event(byte, InputSource::Ps2)
     }
 
     pub fn feed_serial_byte(&mut self, byte: u8) -> bool {
         let byte = match byte {
-            b'\r' | b'\n' => b'\n',
+            b'\\r' | b'\\n' => b'\\n',
             0x7F => 0x08,
             value => value,
         };
 
-        self.buffer.push(KeyInput {
-            byte,
-            source: InputSource::Serial,
-        })
+        self.push_event(byte, InputSource::Serial)
     }
 
     pub fn pop_event(&mut self) -> Option<KeyInput> {
-        self.buffer.pop()
+        debug_assert_eq!(self.buffer.len(), self.sources.len());
+
+        let byte = self.buffer.pop()?;
+        let source = match self.sources.pop()? {
+            0 => InputSource::Ps2,
+            _ => InputSource::Serial,
+        };
+
+        Some(KeyInput { byte, source })
     }
 
     pub fn pop(&mut self) -> Option<u8> {
