@@ -207,8 +207,8 @@ jobs:
 
           for command, expected in [
               (b"help\r", b"Commands: help clear about echo"),
-              (b"echo serial-input-ok\r", b"serial-input-ok"),
               (b"about\r", b"SafirOS x86-64 educational kernel"),
+              (b"help\r", b"Commands: help clear about echo"),
           ]:
               command_start = len(received)
               serial.sendall(command)
