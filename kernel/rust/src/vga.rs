@@ -118,6 +118,9 @@ impl Writer {
                     }
                 }
             }
+            0x80..=0xFF => {
+                serial_write_byte(byte);
+            }
             _ => {}
         }
     }
