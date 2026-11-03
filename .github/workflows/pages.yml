@@ -77,6 +77,7 @@ jobs:
           cp web/index.html site/index.html
           cp web/style.css site/style.css
           cp web/app.js site/app.js
+          cp web/ime-input-fix.js site/ime-input-fix.js
           cp web/coi-serviceworker.js site/coi-serviceworker.js
           cp web/qemu/xterm-pty.js site/qemu/xterm-pty.js
           cp web/qemu/load-rom.js site/qemu/load-rom.js
@@ -87,6 +88,7 @@ jobs:
         run: |
           test -f site/index.html
           test -f site/app.js
+          test -f site/ime-input-fix.js
           test -f site/terminal/xterm.js
           test -f site/terminal/xterm.css
           test -f site/terminal/xterm-LICENSE
