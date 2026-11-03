@@ -5,7 +5,7 @@ const MAX_LINE_LENGTH: usize = 96;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum InputAction {
     Character(u8),
-    Backspace,
+    Backspace(u8),
     Submit,
     Nothing,
     Overflow,
@@ -39,13 +39,20 @@ impl Shell {
             b'\n' => InputAction::Submit,
             0x08 | 0x7F => {
                 if self.length == 0 {
-                    InputAction::Nothing
-                } else {
-                    self.length -= 1;
-                    InputAction::Backspace
+                    return InputAction::Nothing;
                 }
+
+                let mut start = self.length - 1;
+                while start > 0 && self.line[start] & 0xC0 == 0x80 {
+                    start -= 1;
+                }
+
+                let first_byte = self.line[start];
+                let display_cells = if first_byte >= 0xE0 { 2 } else { 1 };
+                self.length = start;
+                InputAction::Backspace(display_cells)
             }
-            0x20..=0x7E => {
+            0x20..=0x7E | 0x80..=0xF4 => {
                 if self.length == MAX_LINE_LENGTH {
                     InputAction::Overflow
                 } else {
@@ -173,7 +180,7 @@ mod tests {
         let mut shell = Shell::new();
         assert_eq!(shell.feed_byte(b'a'), InputAction::Character(b'a'));
         assert_eq!(shell.feed_byte(b'b'), InputAction::Character(b'b'));
-        assert_eq!(shell.feed_byte(0x08), InputAction::Backspace);
+        assert_eq!(shell.feed_byte(0x08), InputAction::Backspace(1));
         assert_eq!(shell.length(), 1);
         assert_eq!(shell.command(), Command::Unknown(b"a"));
     }
@@ -185,6 +192,27 @@ mod tests {
         enter(&mut shell, b"helpX");
         assert_eq!(shell.feed_byte(0x7F), InputAction::Backspace);
         assert_eq!(shell.command(), Command::Help);
+    }
+
+    #[test]
+    fn utf8_input_is_buffered_and_backspace_removes_one_character() {
+        let mut shell = Shell::new();
+
+        for &byte in "あ".as_bytes() {
+            assert_eq!(shell.feed_byte(byte), InputAction::Character(byte));
+        }
+
+        assert_eq!(shell.length(), 3);
+        assert_eq!(shell.feed_byte(0x7F), InputAction::Backspace(2));
+        assert_eq!(shell.length(), 0);
+        assert_eq!(shell.command(), Command::Empty);
+    }
+
+    #[test]
+    fn parses_utf8_echo_arguments() {
+        let mut shell = Shell::new();
+        enter(&mut shell, "echo 日本語".as_bytes());
+        assert_eq!(shell.command(), Command::Echo("日本語".as_bytes()));
     }
 
     #[test]
