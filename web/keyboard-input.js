@@ -165,6 +165,7 @@
     let enabled = Boolean(options.enabled);
     let composing = false;
     let compositionCommitPending = false;
+    let compositionCommitData = "";
     let compositionCommitTimer = 0;
     const passThroughKeys = new Set();
 
@@ -220,6 +221,16 @@
       }
     };
 
+    const clearCompositionCommit = () => {
+      compositionCommitPending = false;
+      compositionCommitData = "";
+
+      if (compositionCommitTimer) {
+        clearTimeout(compositionCommitTimer);
+        compositionCommitTimer = 0;
+      }
+    };
+
     const onKeyDown = event => {
       if (event.target !== textarea) {
         return;
@@ -228,9 +239,15 @@
       const identity = keyIdentity(event);
 
       if (composing || event.isComposing || event.keyCode === 229) {
+        if (!composing && event.keyCode === 229) {
+          clearCompositionCommit();
+        }
+
         passThroughKeys.add(identity);
         return;
       }
+
+      clearCompositionCommit();
 
       const sequence = keySequence(event, terminal);
 
@@ -254,8 +271,14 @@
     };
 
     const onKeyUp = event => {
-      if (event.target === textarea) {
-        passThroughKeys.delete(keyIdentity(event));
+      if (event.target !== textarea) {
+        return;
+      }
+
+      passThroughKeys.delete(keyIdentity(event));
+
+      if (!composing && compositionCommitPending) {
+        clearCompositionCommit();
       }
     };
 
@@ -282,13 +305,7 @@
       }
 
       composing = true;
-      compositionCommitPending = false;
-
-      if (compositionCommitTimer) {
-        clearTimeout(compositionCommitTimer);
-        compositionCommitTimer = 0;
-      }
-
+      clearCompositionCommit();
       positionTextarea();
     };
 
@@ -304,16 +321,21 @@
       }
 
       composing = false;
-      compositionCommitPending = true;
 
-      if (compositionCommitTimer) {
-        clearTimeout(compositionCommitTimer);
+      const committed = typeof event.data === "string" ? event.data : "";
+
+      if (committed) {
+        compositionCommitPending = true;
+        compositionCommitData = committed;
+
+        if (compositionCommitTimer) {
+          clearTimeout(compositionCommitTimer);
+        }
+
+        compositionCommitTimer = setTimeout(clearCompositionCommit, 250);
+      } else {
+        clearCompositionCommit();
       }
-
-      compositionCommitTimer = setTimeout(() => {
-        compositionCommitPending = false;
-        compositionCommitTimer = 0;
-      }, 0);
 
       positionTextarea();
     };
@@ -328,17 +350,27 @@
       if (
         composing ||
         event.isComposing ||
-        inputType.includes("composition") ||
-        compositionCommitPending
+        inputType.includes("composition")
       ) {
-        compositionCommitPending = false;
+        return;
+      }
 
-        if (compositionCommitTimer) {
-          clearTimeout(compositionCommitTimer);
-          compositionCommitTimer = 0;
+      if (compositionCommitPending) {
+        const value = textarea.value;
+        const data = typeof event.data === "string" && event.data.length > 0
+          ? event.data
+          : value;
+
+        if (
+          inputType === "insertfromcomposition" ||
+          data === compositionCommitData ||
+          value === compositionCommitData
+        ) {
+          clearCompositionCommit();
+          return;
         }
 
-        return;
+        clearCompositionCommit();
       }
 
       stop(event);
@@ -417,14 +449,8 @@
 
         if (!enabled) {
           composing = false;
-          compositionCommitPending = false;
+          clearCompositionCommit();
           passThroughKeys.clear();
-
-          if (compositionCommitTimer) {
-            clearTimeout(compositionCommitTimer);
-            compositionCommitTimer = 0;
-          }
-
           clearTextarea();
         }
       },
@@ -443,12 +469,7 @@
         eventRoot.removeEventListener("input", onInput, true);
         eventRoot.removeEventListener("paste", onPaste, true);
 
-        if (compositionCommitTimer) {
-          clearTimeout(compositionCommitTimer);
-          compositionCommitTimer = 0;
-        }
-
-        compositionCommitPending = false;
+        clearCompositionCommit();
         passThroughKeys.clear();
 
         for (const disposable of disposables) {
