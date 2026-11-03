@@ -283,8 +283,10 @@ pub extern "C" fn preempt_task_a() -> ! {
                 crate::shell::InputAction::Character(byte) => {
                     crate::vga::console_write_byte(byte);
                 }
-                crate::shell::InputAction::Backspace => {
-                    crate::vga::console_write_byte(0x08);
+                crate::shell::InputAction::Backspace(cells) => {
+                    for _ in 0..cells {
+                        crate::vga::console_write_byte(0x08);
+                    }
                 }
                 crate::shell::InputAction::Submit => {
                     crate::vga::console_write_byte(b'\n');
