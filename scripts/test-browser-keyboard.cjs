@@ -197,7 +197,7 @@ async function main() {
     );
     assert.deepEqual(
       await page.evaluate(() => window.__compositionPreview),
-      {active:true,text:"\u200E日本語\u200E"}
+      {active:true,text:"日本語"}
     );
     assert.equal(await page.evaluate(() => window.__readPty()),"日本語");
     assert.deepEqual(
