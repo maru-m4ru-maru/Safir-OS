@@ -35,9 +35,11 @@ jobs:
       - name: Install terminal emulator
         run: |
           mkdir -p build/xterm site/terminal
-          npm install --prefix build/xterm --no-save --no-package-lock @xterm/xterm@5.5.0
+          npm install --prefix build/xterm --no-save --no-package-lock @xterm/xterm@5.5.0 @xterm/addon-fit@0.10.0
           cp build/xterm/node_modules/@xterm/xterm/lib/xterm.js site/terminal/xterm.js
           cp build/xterm/node_modules/@xterm/xterm/css/xterm.css site/terminal/xterm.css
+          cp build/xterm/node_modules/@xterm/addon-fit/lib/addon-fit.js site/terminal/addon-fit.js
+          cp build/xterm/node_modules/@xterm/addon-fit/LICENSE site/terminal/addon-fit-LICENSE
           cp build/xterm/node_modules/@xterm/xterm/LICENSE site/terminal/xterm-LICENSE
 
       - name: Build bootloader
@@ -91,6 +93,8 @@ jobs:
           test -f site/ime-input-fix.js
           test -f site/terminal/xterm.js
           test -f site/terminal/xterm.css
+          test -f site/terminal/addon-fit.js
+          test -f site/terminal/addon-fit-LICENSE
           test -f site/terminal/xterm-LICENSE
           test -f site/coi-serviceworker.js
           test -f site/qemu/xterm-pty.js
