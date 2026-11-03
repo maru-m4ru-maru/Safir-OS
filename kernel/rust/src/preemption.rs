@@ -271,7 +271,7 @@ fn run_shell_command(command: crate::shell::Command<'_>) {
 pub extern "C" fn preempt_task_a() -> ! {
     let mut shell = crate::shell::Shell::new();
 
-    crate::vga::console_write_bytes(crate::shell::PROMPT);
+    crate::vga::console_write_prompt(crate::shell::PROMPT);
 
     unsafe {
         asm!("sti", options(nomem, nostack));
@@ -280,30 +280,41 @@ pub extern "C" fn preempt_task_a() -> ! {
     loop {
         if let Some(input) = crate::keyboard::pop_input() {
             match shell.feed_byte(input.byte) {
-                crate::shell::InputAction::Character(byte) => {
-                    crate::vga::console_write_byte(byte);
-                }
-                crate::shell::InputAction::Backspace(cells) => {
-                    for _ in 0..cells {
-                        crate::vga::console_write_byte(0x08);
-                    }
-                }
-                crate::shell::InputAction::Interrupt => {
-                    crate::vga::console_write_bytes(b"^C\r\nsafiros> ");
+                crate::shell::InputAction::Redraw => {
+                    crate::vga::console_redraw_input_line(
+                        crate::shell::PROMPT,
+                        shell.line(),
+                        shell.cursor(),
+                    );
                 }
                 crate::shell::InputAction::Submit => {
+                    crate::vga::console_end_input_line();
                     crate::vga::console_write_byte(b'\n');
                     let command = shell.command();
                     run_shell_command(command);
                     shell.clear();
-                    crate::vga::console_write_bytes(crate::shell::PROMPT);
+                    crate::vga::console_write_prompt(crate::shell::PROMPT);
+                }
+                crate::shell::InputAction::Interrupt => {
+                    crate::vga::console_end_input_line();
+                    crate::vga::console_write_bytes(b"^C\n");
+                    crate::vga::console_write_prompt(crate::shell::PROMPT);
+                }
+                crate::shell::InputAction::ClearScreen => {
+                    crate::vga::console_clear();
+                    crate::vga::console_write_prompt(crate::shell::PROMPT);
+                    crate::vga::console_redraw_input_line(
+                        crate::shell::PROMPT,
+                        shell.line(),
+                        shell.cursor(),
+                    );
                 }
                 crate::shell::InputAction::Nothing => {}
                 crate::shell::InputAction::Overflow => {
-                    crate::vga::console_write_bytes(
-                        b"\r\nLine too long\r\nsafiros> ",
-                    );
+                    crate::vga::console_end_input_line();
+                    crate::vga::console_write_bytes(b"\nLine too long\n");
                     shell.clear();
+                    crate::vga::console_write_prompt(crate::shell::PROMPT);
                 }
             }
 
@@ -318,7 +329,6 @@ pub extern "C" fn preempt_task_a() -> ! {
         }
     }
 }
-
 #[unsafe(no_mangle)]
 pub extern "C" fn preempt_task_b() -> ! {
     unsafe {
