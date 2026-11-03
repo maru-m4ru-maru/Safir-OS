@@ -27,6 +27,9 @@ jobs:
           nasm -dSAFIROS_QEMU_TEST -f bin boot/boot.asm -o build/boot-qemu.bin
           test "$(stat -c%s build/boot-qemu.bin)" -eq 512
 
+      - name: Test browser PTY line discipline
+        run: node scripts/test-web-pty.cjs
+
       - name: Test Rust kernel logic
         run: |
           cargo test --features host-test --lib --manifest-path kernel/rust/Cargo.toml
