@@ -21,12 +21,13 @@ const guestDecoder=new TextDecoder();
 
 const terminal=new Terminal({
   allowTransparency:false,
+  cols:80,
+  rows:24,
   convertEol:true,
   cursorBlink:true,
   cursorStyle:"bar",
-  fontFamily:'"Cascadia Code","SFMono-Regular",Consolas,monospace',
+  fontFamily:'ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace',
   fontSize:14,
-  lineHeight:1.35,
   scrollback:10000,
   theme:{
     background:"#000000",
@@ -54,8 +55,6 @@ const terminal=new Terminal({
   }
 });
 
-const fitAddon=new FitAddon.FitAddon();
-terminal.loadAddon(fitAddon);
 terminal.open(terminalMount);
 
 const originalTerminalWrite=terminal.write.bind(terminal);
@@ -67,17 +66,6 @@ terminal.write=function(data,onWrite){
   recordGuestOutput(output);
   return originalTerminalWrite(data,onWrite);
 };
-
-function fitTerminal(){
-  try{
-    fitAddon.fit();
-  }catch(error){
-    console.warn("Terminal resize failed",error);
-  }
-}
-
-window.addEventListener("resize",fitTerminal);
-requestAnimationFrame(fitTerminal);
 
 terminalMount.addEventListener("mousedown",()=>{
   terminal.focus();
@@ -261,7 +249,7 @@ async function boot(){
       throw new Error("QEMU PTY is unavailable");
     }
 
-    if(typeof Terminal!=="function"||typeof FitAddon==="undefined"){
+    if(typeof Terminal!=="function"){
       throw new Error("Terminal emulator assets are unavailable");
     }
 
@@ -308,7 +296,6 @@ async function boot(){
       appendSerial("[webvm] PTY polling enabled\r\n");
     }
 
-    fitTerminal();
     terminal.focus();
 
     setStatus("QEMU initialized · waiting for SafirOS");
