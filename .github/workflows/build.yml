@@ -180,9 +180,9 @@ jobs:
           serial.settimeout(0.1)
           received = bytearray()
 
-          def read_until(marker, timeout):
+          def read_until(marker, timeout, start=0):
               deadline = time.monotonic() + timeout
-              while marker not in received:
+              while received.find(marker, start) < 0:
                   if time.monotonic() >= deadline:
                       output = received.decode("ascii", errors="replace")
                       raise SystemExit(
@@ -199,16 +199,23 @@ jobs:
 
                   received.extend(chunk)
 
-              return received.decode("ascii", errors="replace")
+              return received.find(marker, start), received.decode("ascii", errors="replace")
 
-          boot_output = read_until(b"safiros> ", 12)
+          prompt_at, boot_output = read_until(b"safiros> ", 12)
           print(boot_output)
           print("Shell prompt reached.")
 
-          serial.sendall(b"help\r")
-          shell_output = read_until(b"Commands: help clear about echo", 5)
-          print(shell_output)
-          print("Serial input and shell command output verified.")
+          for command, expected in [
+              (b"help\r", b"Commands: help clear about echo"),
+              (b"echo serial-input-ok\r", b"serial-input-ok"),
+              (b"about\r", b"SafirOS x86-64 educational kernel"),
+          ]:
+              command_start = len(received)
+              serial.sendall(command)
+              output_at, shell_output = read_until(expected, 5, command_start)
+              prompt_at, shell_output = read_until(b"safiros> ", 5, output_at + len(expected))
+              print(shell_output[command_start:].split("safiros> ", 1)[0])
+              print("Command completed and prompt returned.")
 
           serial.close()
           PY
