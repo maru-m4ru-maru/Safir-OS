@@ -228,6 +228,19 @@ async function waitForRuntime(startedAt){
 async function boot(){
   try{
     setRuntimeState("Starting","starting");
+    setStatus("Enabling shared memory...");
+    setProgress(2);
+
+    if(!window.COI_READY){
+      throw new Error("Cross-origin isolation bootstrap is unavailable");
+    }
+
+    await window.COI_READY;
+
+    if(typeof SharedArrayBuffer==="undefined"||!window.crossOriginIsolated){
+      throw new Error("Cross-origin isolation is not active after service worker startup");
+    }
+
     setStatus("Loading QEMU ROM loader...");
     setProgress(5);
 
@@ -236,14 +249,6 @@ async function boot(){
     }
 
     await window.SAFIROS_ROM_READY;
-
-    if(typeof SharedArrayBuffer==="undefined"){
-      throw new Error("SharedArrayBuffer is unavailable");
-    }
-
-    if(!window.crossOriginIsolated){
-      throw new Error("crossOriginIsolated is not enabled");
-    }
 
     if(typeof openpty!=="function"){
       throw new Error("QEMU PTY is unavailable");
