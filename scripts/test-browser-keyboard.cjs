@@ -175,6 +175,11 @@ async function main() {
       window.__dispatchInput("に",{value:"に",inputType:"insertCompositionText",isComposing:true});
       window.__dispatchComposition("compositionupdate","日本語");
       window.__dispatchInput("日本語",{value:"日本語",inputType:"insertCompositionText",isComposing:true});
+      const compositionView = document.querySelector(".composition-view");
+      window.__compositionPreview = {
+        active:compositionView?.classList.contains("active") || false,
+        text:compositionView?.textContent || ""
+      };
       window.__dispatchComposition("compositionend","日本語");
     });
     await page.waitForTimeout(20);
@@ -189,6 +194,10 @@ async function main() {
       nativeComposition.received,
       "日本語",
       "Native IME commit mismatch: " + JSON.stringify(nativeComposition)
+    );
+    assert.deepEqual(
+      await page.evaluate(() => window.__compositionPreview),
+      {active:true,text:"\u200E日本語\u200E"}
     );
     assert.equal(await page.evaluate(() => window.__readPty()),"日本語");
     assert.deepEqual(
