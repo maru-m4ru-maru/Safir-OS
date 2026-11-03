@@ -186,7 +186,7 @@ jobs:
                   if time.monotonic() >= deadline:
                       output = received.decode("ascii", errors="replace")
                       raise SystemExit(
-                          f"Timed out waiting for {marker!r}. Serial output:\\n{output}"
+                          f"Timed out waiting for {marker!r}. Serial output:\n{output}"
                       )
 
                   try:
@@ -205,7 +205,7 @@ jobs:
           print(boot_output)
           print("Shell prompt reached.")
 
-          serial.sendall(b"help\\r")
+          serial.sendall(b"help\r")
           shell_output = read_until(b"Commands: help clear about echo", 5)
           print(shell_output)
           print("Serial input and shell command output verified.")
