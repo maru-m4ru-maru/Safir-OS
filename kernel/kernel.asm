@@ -326,15 +326,19 @@ long_mode_start:
     out 0xE9, al
 %endif
 
-    mov rdi, E820_BASE
-    movzx rsi, word [KERNEL_BASE + e820_count]
-    xor edx, edx
+    mov r12, E820_BASE
+    movzx r13, word [KERNEL_BASE + e820_count]
+    xor r14d, r14d
 %ifdef SAFIROS_QEMU_TEST
-    mov edx, 1
+    mov r14d, 1
 %endif
+
     mov rsi, KERNEL_BASE + msg_rust
     call serial_print
 
+    mov rdi, r12
+    mov rsi, r13
+    mov rdx, r14
     mov rax, RUST_BASE
     call rax
 
