@@ -229,6 +229,10 @@ input {
   height: 100%;
 }
 
+#terminal_mount.is-booting .xterm {
+  visibility: hidden;
+}
+
 #terminal_mount .xterm-viewport {
   overflow-y: auto !important;
   scrollbar-color: #34455a #070b12;
