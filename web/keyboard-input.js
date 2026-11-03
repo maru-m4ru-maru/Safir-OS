@@ -164,11 +164,11 @@
 
     let enabled = Boolean(options.enabled);
     let composing = false;
-    let pendingComposition = "";
-    let compositionTimer = 0;
-    let compositionStartValue = "";
-    let compositionPreview = "";
-    let passThroughKey = false;
+    let compositionCommitPending = false;
+    let compositionCommitTimer = 0;
+    const passThroughKeys = new Set();
+
+    const keyIdentity = event => event.code || event.key || String(event.keyCode);
 
     const positionTextarea = () => {
       if (!textarea.style || !terminal.element || !terminal.buffer) {
@@ -220,36 +220,30 @@
       }
     };
 
-    const flushPendingComposition = () => {
-      if (compositionTimer) {
-        clearTimeout(compositionTimer);
-        compositionTimer = 0;
-      }
-
-      const text = pendingComposition;
-      pendingComposition = "";
-      send(text);
-    };
-
     const onKeyDown = event => {
       if (event.target !== textarea) {
         return;
       }
 
+      const identity = keyIdentity(event);
+
       if (composing || event.isComposing || event.keyCode === 229) {
-        passThroughKey = false;
-        stop(event);
+        passThroughKeys.add(identity);
         return;
       }
 
       const sequence = keySequence(event, terminal);
 
       if (sequence === PASSTHROUGH) {
-        passThroughKey = true;
+        passThroughKeys.add(identity);
         return;
       }
 
-      passThroughKey = false;
+      if (event.key === "Dead" || event.key === "AltGraph") {
+        passThroughKeys.add(identity);
+        return;
+      }
+
       stop(event);
 
       if (sequence !== null) {
@@ -260,22 +254,26 @@
     };
 
     const onKeyUp = event => {
+      if (event.target === textarea) {
+        passThroughKeys.delete(keyIdentity(event));
+      }
+    };
+
+    const onKeyPress = event => {
       if (event.target !== textarea) {
         return;
       }
 
-      if (passThroughKey) {
-        passThroughKey = false;
+      if (
+        composing ||
+        event.isComposing ||
+        event.keyCode === 229 ||
+        passThroughKeys.has(keyIdentity(event))
+      ) {
         return;
       }
 
       stop(event);
-    };
-
-    const onKeyPress = event => {
-      if (event.target === textarea && !passThroughKey) {
-        stop(event);
-      }
     };
 
     const onCompositionStart = event => {
@@ -283,26 +281,21 @@
         return;
       }
 
-      stop(event);
-      flushPendingComposition();
       composing = true;
-      compositionStartValue = textarea.value;
-      compositionPreview = "";
+      compositionCommitPending = false;
+
+      if (compositionCommitTimer) {
+        clearTimeout(compositionCommitTimer);
+        compositionCommitTimer = 0;
+      }
+
       positionTextarea();
     };
 
     const onCompositionUpdate = event => {
-      if (event.target !== textarea) {
-        return;
+      if (event.target === textarea) {
+        positionTextarea();
       }
-
-      stop(event);
-
-      if (typeof event.data === "string") {
-        compositionPreview = event.data;
-      }
-
-      positionTextarea();
     };
 
     const onCompositionEnd = event => {
@@ -310,22 +303,19 @@
         return;
       }
 
-      stop(event);
       composing = false;
+      compositionCommitPending = true;
 
-      const textareaInput = textarea.value.slice(compositionStartValue.length);
-      const committed = typeof event.data === "string" && event.data.length > 0
-        ? event.data
-        : textareaInput || compositionPreview;
-
-      compositionStartValue = "";
-      compositionPreview = "";
-      clearTextarea();
-
-      if (committed) {
-        pendingComposition = committed;
-        compositionTimer = setTimeout(flushPendingComposition, 0);
+      if (compositionCommitTimer) {
+        clearTimeout(compositionCommitTimer);
       }
+
+      compositionCommitTimer = setTimeout(() => {
+        compositionCommitPending = false;
+        compositionCommitTimer = 0;
+      }, 0);
+
+      positionTextarea();
     };
 
     const onInput = event => {
@@ -333,47 +323,35 @@
         return;
       }
 
-      stop(event);
+      const inputType = String(event.inputType || "").toLowerCase();
 
-      if (composing || event.isComposing) {
-        if (typeof event.data === "string" && event.data.length > 0) {
-          compositionPreview = event.data;
+      if (
+        composing ||
+        event.isComposing ||
+        inputType.includes("composition") ||
+        compositionCommitPending
+      ) {
+        compositionCommitPending = false;
+
+        if (compositionCommitTimer) {
+          clearTimeout(compositionCommitTimer);
+          compositionCommitTimer = 0;
         }
+
         return;
       }
 
-      const value = textarea.value;
-      const inputType = String(event.inputType || "").toLowerCase();
-      const data = typeof event.data === "string" && event.data.length > 0
-        ? event.data
-        : value;
-
-      if (pendingComposition) {
-        if (
-          inputType.includes("composition") ||
-          data === pendingComposition ||
-          value === pendingComposition
-        ) {
-          const committed = data || value || pendingComposition;
-
-          if (compositionTimer) {
-            clearTimeout(compositionTimer);
-            compositionTimer = 0;
-          }
-
-          pendingComposition = "";
-          clearTextarea();
-          send(committed);
-          return;
-        }
-
-        flushPendingComposition();
-      }
+      stop(event);
 
       if (inputType.startsWith("delete")) {
         clearTextarea();
         return;
       }
+
+      const value = textarea.value;
+      const data = typeof event.data === "string" && event.data.length > 0
+        ? event.data
+        : value;
 
       clearTextarea();
       send(data);
@@ -439,16 +417,14 @@
 
         if (!enabled) {
           composing = false;
-          compositionStartValue = "";
-          compositionPreview = "";
-          passThroughKey = false;
+          compositionCommitPending = false;
+          passThroughKeys.clear();
 
-          if (compositionTimer) {
-            clearTimeout(compositionTimer);
-            compositionTimer = 0;
+          if (compositionCommitTimer) {
+            clearTimeout(compositionCommitTimer);
+            compositionCommitTimer = 0;
           }
 
-          pendingComposition = "";
           clearTextarea();
         }
       },
@@ -467,12 +443,13 @@
         eventRoot.removeEventListener("input", onInput, true);
         eventRoot.removeEventListener("paste", onPaste, true);
 
-        if (compositionTimer) {
-          clearTimeout(compositionTimer);
-          compositionTimer = 0;
+        if (compositionCommitTimer) {
+          clearTimeout(compositionCommitTimer);
+          compositionCommitTimer = 0;
         }
 
-        pendingComposition = "";
+        compositionCommitPending = false;
+        passThroughKeys.clear();
 
         for (const disposable of disposables) {
           disposable.dispose();
