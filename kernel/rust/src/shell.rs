@@ -6,6 +6,7 @@ const MAX_LINE_LENGTH: usize = 96;
 pub enum InputAction {
     Character(u8),
     Backspace(u8),
+    Interrupt,
     Submit,
     Nothing,
     Overflow,
@@ -36,6 +37,10 @@ impl Shell {
 
     pub fn feed_byte(&mut self, byte: u8) -> InputAction {
         match byte {
+            0x03 => {
+                self.clear();
+                InputAction::Interrupt
+            }
             b'\n' => InputAction::Submit,
             0x08 | 0x7F => {
                 if self.length == 0 {
@@ -213,6 +218,15 @@ mod tests {
         let mut shell = Shell::new();
         enter(&mut shell, "echo 日本語".as_bytes());
         assert_eq!(shell.command(), Command::Echo("日本語".as_bytes()));
+    }
+
+    #[test]
+    fn control_c_clears_the_current_input_line() {
+        let mut shell = Shell::new();
+        enter(&mut shell, b"help");
+        assert_eq!(shell.feed_byte(0x03), InputAction::Interrupt);
+        assert_eq!(shell.length(), 0);
+        assert_eq!(shell.command(), Command::Empty);
     }
 
     #[test]
