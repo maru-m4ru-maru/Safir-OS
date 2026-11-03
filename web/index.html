@@ -3,18 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#080d15">
-<meta name="color-scheme" content="dark">
-<title>SafirOS — Web Terminal</title>
+<meta name="theme-color" content="#000000">
+<title>Safir OS</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="preload" href="terminal/xterm.css" as="style">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="terminal/xterm.css">
 <script defer src="coi-serviceworker.js"></script>
 <script defer src="./qemu/xterm-pty.js"></script>
 <script defer src="terminal/xterm.js"></script>
-<script defer src="terminal/addon-fit.js"></script>
-<script defer src="ime-input-fix.js"></script>
+<script defer src="keyboard-input.js"></script>
 <script>
 window.SAFIROS_BASE=location.pathname.includes("/web/")?"../":"./";
 window.Module={
@@ -57,7 +54,7 @@ window.addEventListener("error",event=>{
   const message=event.error&&event.error.message
     ?event.error.message
     :event.message;
-  const status=document.getElementById("footer_status");
+  const status=document.getElementById("status");
   const subtitle=document.getElementById("boot_subtitle");
   if(message){
     if(status) status.textContent="Browser error: "+message;
@@ -69,7 +66,7 @@ window.addEventListener("unhandledrejection",event=>{
   const reason=event.reason&&event.reason.message
     ?event.reason.message
     :String(event.reason);
-  const status=document.getElementById("footer_status");
+  const status=document.getElementById("status");
   const subtitle=document.getElementById("boot_subtitle");
   if(status) status.textContent="Startup error: "+reason;
   if(subtitle) subtitle.textContent="Startup error: "+reason;
@@ -77,56 +74,11 @@ window.addEventListener("unhandledrejection",event=>{
 </script>
 </head>
 <body>
-<div id="app_shell">
-  <header id="topbar">
-    <a class="brand" href="./" aria-label="SafirOS home">
-      <img src="safiros-logo.svg" alt="" width="27" height="24">
-      <span class="brand-name">SafirOS</span>
-      <span class="brand-divider" aria-hidden="true"></span>
-      <span class="brand-section">WEB TERMINAL</span>
-    </a>
-    <div class="topbar-right">
-      <span class="system-chip">x86_64</span>
-      <div id="runtime_state" data-state="starting" role="status" aria-live="polite">
-        <span class="state-dot" aria-hidden="true"></span>
-        <span id="runtime_label">Starting</span>
-      </div>
-    </div>
-  </header>
-
-  <div id="progress_track" aria-hidden="true">
-    <div id="progress_bar"></div>
-  </div>
-
-  <main id="workspace">
-    <section id="terminal_panel" aria-label="SafirOS terminal">
-      <div id="terminal_toolbar">
-        <div class="terminal-caption">
-          <span class="terminal-indicator" aria-hidden="true"></span>
-          <span>Console</span>
-        </div>
-        <span id="terminal_dimensions">80 × 24</span>
-      </div>
-
-      <div id="terminal_mount" class="is-booting" tabindex="0" aria-label="SafirOS terminal output and input">
-        <section id="boot_screen" role="status" aria-live="polite">
-          <img class="boot-logo" src="safiros-logo.svg" alt="" width="52" height="45">
-          <h1>SafirOS Web Terminal</h1>
-          <p class="boot-description">Starting the x86-64 environment</p>
-          <div class="boot-status">
-            <span class="state-dot" aria-hidden="true"></span>
-            <span id="boot_subtitle">Preparing the terminal</span>
-          </div>
-        </section>
-      </div>
-    </section>
-  </main>
-
-  <footer id="bottombar">
-    <span class="footer-platform">QEMU TCG <span aria-hidden="true">/</span> x86_64</span>
-    <span id="footer_status">Preparing the virtual machine</span>
-  </footer>
-</div>
+<main id="terminal_mount" tabindex="0" aria-label="Safir OS terminal"></main>
+<div id="status" hidden></div>
+<div id="progress_bar" hidden></div>
+<div id="runtime_state" hidden><span id="runtime_label"></span></div>
+<div id="boot_screen" hidden><div id="boot_subtitle"></div></div>
 <script defer src="app.js"></script>
 </body>
 </html>
