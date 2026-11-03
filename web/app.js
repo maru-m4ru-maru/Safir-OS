@@ -57,6 +57,11 @@ const terminal=new Terminal({
 
 terminal.open(terminalMount);
 
+const imeInputPatchInstalled=Boolean(
+  window.SafirOSImeFix &&
+  window.SafirOSImeFix.install(terminal)
+);
+
 const originalTerminalWrite=terminal.write.bind(terminal);
 terminal.write=function(data,onWrite){
   const output=typeof data==="string"
@@ -230,6 +235,10 @@ async function boot(){
     setRuntimeState("Starting","starting");
     setStatus("Enabling shared memory...");
     setProgress(2);
+
+    if(!imeInputPatchInstalled){
+      throw new Error("xterm.js IME compatibility patch is unavailable");
+    }
 
     if(!window.COI_READY){
       throw new Error("Cross-origin isolation bootstrap is unavailable");
