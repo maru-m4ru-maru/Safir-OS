@@ -214,11 +214,18 @@ jobs:
               (b"help\r", b"Commands: help clear about echo"),
           ]:
               command_start = len(received)
-              serial.sendall(command)
-              output_at, shell_output = read_until(expected, 5, command_start)
+
+              for byte in command[:-1]:
+                  input_start = len(received)
+                  serial.sendall(bytes([byte]))
+                  read_until(bytes([byte]), 2, input_start)
+
+              response_start = len(received)
+              serial.sendall(command[-1:])
+              output_at, shell_output = read_until(expected, 5, response_start)
               prompt_at, shell_output = read_until(b"safiros> ", 5, output_at + len(expected))
               print(shell_output[command_start:].split("safiros> ", 1)[0])
-              print("Command completed and prompt returned.")
+              print("Characters echoed immediately; command completed and prompt returned.")
 
           serial.close()
           PY
