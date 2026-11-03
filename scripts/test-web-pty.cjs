@@ -41,6 +41,13 @@ for (const character of "help") {
 
 assert.equal(terminalOutput, "");
 
+sendData("\x7f");
+assert.equal(slave.readable, true);
+assert.equal(
+  Buffer.from(slave.read()).toString("hex"),
+  "7f"
+);
+
 sendData("\r");
 assert.equal(slave.readable, true);
 assert.equal(
