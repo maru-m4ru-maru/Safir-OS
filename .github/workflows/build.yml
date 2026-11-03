@@ -30,8 +30,8 @@ jobs:
       - name: Test browser PTY line discipline
         run: node scripts/test-web-pty.cjs
 
-      - name: Test xterm IME textarea diff handling
-        run: node scripts/test-xterm-ime-fix.cjs
+      - name: Test independent keyboard input bridge
+        run: node scripts/test-keyboard-input.cjs
 
       - name: Test COI service-worker lifecycle
         run: node scripts/test-coi-serviceworker.cjs
