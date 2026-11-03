@@ -38,13 +38,20 @@ window.Module={
 };
 </script>
 <script>
-window.SAFIROS_ROM_READY=new Promise((resolve,reject)=>{
-  const script=document.createElement("script");
-  script.src=window.SAFIROS_BASE+"qemu/load-rom.js";
-  script.onload=resolve;
-  script.onerror=()=>reject(new Error("Failed to load QEMU ROM loader"));
-  document.head.appendChild(script);
-});
+window.SAFIROS_ROM_READY=null;
+window.loadSafirosRom=()=>{
+  if(!window.SAFIROS_ROM_READY){
+    window.SAFIROS_ROM_READY=new Promise((resolve,reject)=>{
+      const script=document.createElement("script");
+      script.src=window.SAFIROS_BASE+"qemu/load-rom.js";
+      script.onload=resolve;
+      script.onerror=()=>reject(new Error("Failed to load QEMU ROM loader"));
+      document.head.appendChild(script);
+    });
+  }
+
+  return window.SAFIROS_ROM_READY;
+};
 
 window.addEventListener("error",event=>{
   const message=event.error&&event.error.message
@@ -101,7 +108,7 @@ window.addEventListener("unhandledrejection",event=>{
         <span id="terminal_dimensions">80 × 24</span>
       </div>
 
-      <div id="terminal_mount" tabindex="0" aria-label="SafirOS terminal output and input">
+      <div id="terminal_mount" class="is-booting" tabindex="0" aria-label="SafirOS terminal output and input">
         <section id="boot_screen" role="status" aria-live="polite">
           <img class="boot-logo" src="safiros-logo.svg" alt="" width="52" height="45">
           <h1>SafirOS Web Terminal</h1>
