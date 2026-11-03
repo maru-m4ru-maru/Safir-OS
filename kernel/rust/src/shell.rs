@@ -190,7 +190,7 @@ mod tests {
         let mut shell = Shell::new();
 
         enter(&mut shell, b"helpX");
-        assert_eq!(shell.feed_byte(0x7F), InputAction::Backspace);
+        assert_eq!(shell.feed_byte(0x7F), InputAction::Backspace(1));
         assert_eq!(shell.command(), Command::Help);
     }
 
