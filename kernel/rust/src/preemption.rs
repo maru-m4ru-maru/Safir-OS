@@ -288,6 +288,9 @@ pub extern "C" fn preempt_task_a() -> ! {
                         crate::vga::console_write_byte(0x08);
                     }
                 }
+                crate::shell::InputAction::Interrupt => {
+                    crate::vga::console_write_bytes(b"^C\r\nsafiros> ");
+                }
                 crate::shell::InputAction::Submit => {
                     crate::vga::console_write_byte(b'\n');
                     let command = shell.command();
