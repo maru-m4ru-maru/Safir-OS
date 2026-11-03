@@ -1,4 +1,3 @@
-/*! coi-serviceworker compatibility bootstrap for static hosts; MIT license */
 (function () {
   if (typeof window === "undefined") {
     self.addEventListener("install", event => {
@@ -44,38 +43,87 @@
 
   const scriptUrl = document.currentScript.src;
   const scope = new URL("./", scriptUrl).pathname;
-  const reloadKey = "safiros-coi-reload-v3";
+  const reloadKey = "safiros-coi-bootstrap-v4";
+  const controllerWaitMs = 1000;
+
+  function workerState(worker) {
+    if (!worker) {
+      return "none";
+    }
+
+    return worker.state + " @ " + worker.scriptURL;
+  }
+
+  function diagnostics(registration) {
+    const registrationScope = registration
+      ? registration.scope
+      : "unavailable";
+    const pageUrl = new URL(location.href);
+    const scopeUrl = new URL(registrationScope, location.href);
+    const pageInScope = pageUrl.origin === scopeUrl.origin &&
+      pageUrl.pathname.startsWith(scopeUrl.pathname);
+
+    return [
+      "page=" + location.href,
+      "expectedScope=" + scope,
+      "registrationScope=" + registrationScope,
+      "pageInScope=" + pageInScope,
+      "secureContext=" + window.isSecureContext,
+      "controller=" + workerState(navigator.serviceWorker.controller),
+      "active=" + workerState(registration && registration.active),
+      "waiting=" + workerState(registration && registration.waiting),
+      "installing=" + workerState(registration && registration.installing),
+      "reloadCount=" + String(window.sessionStorage.getItem(reloadKey) || "0")
+    ].join("; ");
+  }
+
+  function withTimeout(promise, timeoutMs, message) {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+
+      Promise.resolve(promise).then(
+        value => {
+          clearTimeout(timeout);
+          resolve(value);
+        },
+        error => {
+          clearTimeout(timeout);
+          reject(error);
+        }
+      );
+    });
+  }
 
   function waitForController(timeoutMs) {
     if (navigator.serviceWorker.controller) {
       return Promise.resolve(navigator.serviceWorker.controller);
     }
 
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        navigator.serviceWorker.removeEventListener(
-          "controllerchange",
-          checkController
-        );
-        reject(new Error(
-          "The COI service worker is active but does not control this page. " +
-          "Check the site's service-worker permission. Scope=" + scope
-        ));
-      }, timeoutMs);
+    return new Promise(resolve => {
+      let finished = false;
 
-      function checkController() {
-        const controller = navigator.serviceWorker.controller;
-        if (!controller) {
+      const finish = controller => {
+        if (finished) {
           return;
         }
 
+        finished = true;
         clearTimeout(timeout);
         navigator.serviceWorker.removeEventListener(
           "controllerchange",
           checkController
         );
-        resolve(controller);
-      }
+        resolve(controller || null);
+      };
+
+      const checkController = () => {
+        const controller = navigator.serviceWorker.controller;
+        if (controller) {
+          finish(controller);
+        }
+      };
+
+      const timeout = setTimeout(() => finish(null), timeoutMs);
 
       navigator.serviceWorker.addEventListener(
         "controllerchange",
@@ -83,6 +131,23 @@
       );
       checkController();
     });
+  }
+
+  function reloadForServiceWorker(reason, registration) {
+    const reloadCount = Math.max(
+      0,
+      Number(window.sessionStorage.getItem(reloadKey) || "0") || 0
+    );
+
+    if (reloadCount >= 1) {
+      throw new Error(
+        reason + " Bootstrap diagnostics: " + diagnostics(registration)
+      );
+    }
+
+    window.sessionStorage.setItem(reloadKey, String(reloadCount + 1));
+    window.location.reload();
+    return new Promise(() => {});
   }
 
   async function inspectIsolationHeaders() {
@@ -104,7 +169,7 @@
       window.crossOriginIsolated &&
       typeof SharedArrayBuffer !== "undefined"
     ) {
-      sessionStorage.removeItem(reloadKey);
+      window.sessionStorage.removeItem(reloadKey);
       return true;
     }
 
@@ -124,25 +189,41 @@
       }
     );
 
-    await Promise.race([
+    const readyRegistration = await withTimeout(
       navigator.serviceWorker.ready,
-      new Promise((_, reject) => {
-        setTimeout(
-          () => reject(new Error(
-            "Timed out waiting for the COI service worker"
-          )),
-          20000
-        );
-      })
-    ]);
+      20000,
+      "Timed out waiting for the COI service worker. " +
+      "Bootstrap diagnostics: " + diagnostics(registration)
+    );
 
-    await waitForController(15000);
+    const activeRegistration = readyRegistration || registration;
+    const registrationScope = new URL(activeRegistration.scope);
+    const pageUrl = new URL(location.href);
+
+    if (
+      pageUrl.origin !== registrationScope.origin ||
+      !pageUrl.pathname.startsWith(registrationScope.pathname)
+    ) {
+      throw new Error(
+        "The COI service worker scope does not include this page. " +
+        "Bootstrap diagnostics: " + diagnostics(activeRegistration)
+      );
+    }
+
+    const controller = await waitForController(controllerWaitMs);
+
+    if (!controller) {
+      return reloadForServiceWorker(
+        "The COI service worker is active but this page is not controlled.",
+        activeRegistration
+      );
+    }
 
     if (
       window.crossOriginIsolated &&
       typeof SharedArrayBuffer !== "undefined"
     ) {
-      sessionStorage.removeItem(reloadKey);
+      window.sessionStorage.removeItem(reloadKey);
       return true;
     }
 
@@ -152,34 +233,23 @@
       headers.coop !== "same-origin" ||
       headers.coep !== "require-corp"
     ) {
-      if (sessionStorage.getItem(reloadKey) === "1") {
-        throw new Error(
-          "The COI service worker controls this page, but the required " +
-          "response headers are missing. HTTP=" + headers.status +
-          ", COOP=" + String(headers.coop) +
-          ", COEP=" + String(headers.coep) +
-          ", scope=" + scope
-        );
-      }
-
-      sessionStorage.setItem(reloadKey, "1");
-      window.location.reload();
-      return new Promise(() => {});
-    }
-
-    if (sessionStorage.getItem(reloadKey) === "1") {
-      throw new Error(
-        "COOP and COEP headers are present, but this document is still " +
-        "not cross-origin isolated. HTTP=" + headers.status +
+      return reloadForServiceWorker(
+        "The COI service worker controls this page, but the required " +
+        "response headers are missing. HTTP=" + headers.status +
         ", COOP=" + String(headers.coop) +
         ", COEP=" + String(headers.coep) +
-        ", controller=" + String(Boolean(navigator.serviceWorker.controller))
+        ", CORP=" + String(headers.corp),
+        activeRegistration
       );
     }
 
-    sessionStorage.setItem(reloadKey, "1");
-    window.location.reload();
-
-    return new Promise(() => {});
+    return reloadForServiceWorker(
+      "COOP and COEP headers are present, but this document is still " +
+      "not cross-origin isolated. HTTP=" + headers.status +
+      ", COOP=" + String(headers.coop) +
+      ", COEP=" + String(headers.coep) +
+      ", CORP=" + String(headers.corp),
+      activeRegistration
+    );
   })();
 })();
