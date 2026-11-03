@@ -233,6 +233,32 @@ jobs:
               print(shell_output[command_start:].split("safiros> ", 1)[0])
               print("Characters echoed immediately; command completed and prompt returned.")
 
+          command_start = len(received)
+
+          for byte in b"helpX":
+              input_start = len(received)
+              serial.sendall(bytes([byte]))
+              read_until(bytes([byte]), 2, input_start)
+
+          backspace_start = len(received)
+          serial.sendall(b"\\x7f")
+          read_until(b"\\x08 \\x08", 2, backspace_start)
+
+          response_start = len(received)
+          serial.sendall(b"\\r")
+          output_at, shell_output = read_until(
+              b"Commands: help clear about echo",
+              5,
+              response_start
+          )
+          prompt_at, shell_output = read_until(
+              b"safiros> ",
+              5,
+              output_at + len(b"Commands: help clear about echo")
+          )
+          print(shell_output[command_start:].split("safiros> ", 1)[0])
+          print("DEL was handled as Backspace and the edited command executed.")
+
           serial.close()
           PY
 
