@@ -139,6 +139,80 @@ jobs:
           dd if=build/kernel.bin of=build/SafirOS.img bs=512 seek=1 conv=notrunc status=none
           test "$(stat -c%s build/SafirOS.img)" -eq 1474560
 
+      - name: Test browser-style serial shell input under QEMU
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f build/qemu-serial-monitor.sock
+
+          qemu-system-x86_64 \
+            -drive file=build/SafirOS.img,format=raw,if=floppy \
+            -display none \
+            -monitor unix:build/qemu-serial-monitor.sock,server=on,wait=off \
+            -serial tcp:127.0.0.1:4555,server=on,wait=on \
+            -no-reboot \
+            -no-shutdown &
+          qemu_pid=$!
+
+          cleanup() {
+            kill "$qemu_pid" 2>/dev/null || true
+            wait "$qemu_pid" 2>/dev/null || true
+            rm -f build/qemu-serial-monitor.sock
+          }
+          trap cleanup EXIT
+
+          python3 - <<'PY'
+          import socket
+          import time
+
+          serial = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+          deadline = time.monotonic() + 10
+
+          while True:
+              try:
+                  serial.connect(("127.0.0.1", 4555))
+                  break
+              except OSError:
+                  if time.monotonic() >= deadline:
+                      raise SystemExit("QEMU serial console did not become available")
+                  time.sleep(0.05)
+
+          serial.settimeout(0.1)
+          received = bytearray()
+
+          def read_until(marker, timeout):
+              deadline = time.monotonic() + timeout
+              while marker not in received:
+                  if time.monotonic() >= deadline:
+                      output = received.decode("ascii", errors="replace")
+                      raise SystemExit(
+                          f"Timed out waiting for {marker!r}. Serial output:\\n{output}"
+                      )
+
+                  try:
+                      chunk = serial.recv(4096)
+                  except socket.timeout:
+                      continue
+
+                  if not chunk:
+                      raise SystemExit("QEMU serial connection closed unexpectedly")
+
+                  received.extend(chunk)
+
+              return received.decode("ascii", errors="replace")
+
+          boot_output = read_until(b"safiros> ", 12)
+          print(boot_output)
+          print("Shell prompt reached.")
+
+          serial.sendall(b"help\\r")
+          shell_output = read_until(b"Commands: help clear about echo", 5)
+          print(shell_output)
+          print("Serial input and shell command output verified.")
+
+          serial.close()
+          PY
+
       - name: Create QEMU disk image
         run: |
           dd if=/dev/zero of=build/SafirOS-qemu.img bs=512 count=2880 status=none
