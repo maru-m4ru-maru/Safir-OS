@@ -90,7 +90,7 @@ jobs:
         run: |
           test -f site/index.html
           test -f site/app.js
-          test -f site/ime-input-fix.js
+          test -f site/keyboard-input.js
           test -f site/terminal/xterm.js
           test -f site/terminal/xterm.css
           test -f site/terminal/addon-fit.js
