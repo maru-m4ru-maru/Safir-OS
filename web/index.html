@@ -11,7 +11,6 @@
 <script src="coi-serviceworker.js"></script>
 <script src="./qemu/xterm-pty.js"></script>
 <script src="terminal/xterm.js"></script>
-<script src="terminal/addon-fit.js"></script>
 <script>
 window.SAFIROS_BASE=location.pathname.includes("/web/")?"../":"./";
 window.Module={
@@ -67,7 +66,7 @@ window.addEventListener("unhandledrejection",event=>{
 </script>
 </head>
 <body>
-<main id="terminal_mount" aria-label="Safir OS terminal"></main>
+<main id="terminal_mount" tabindex="0" aria-label="Safir OS terminal"></main>
 <div id="status" hidden></div>
 <div id="progress_bar" hidden></div>
 <div id="runtime_state" hidden><span id="runtime_label"></span></div>
