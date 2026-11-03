@@ -2,7 +2,7 @@ name: Build SafirOS
 
 on:
   push:
-    branches: [main]
+    branches: [main, fix/terminal-keyboard-input]
   pull_request:
     branches: [main]
   workflow_dispatch:
