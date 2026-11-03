@@ -70,8 +70,6 @@ pub extern "C" fn rust_main(e820_ptr: u64, e820_len: usize, test_mode: u64) {
         vga::console_write_bytes(b"Physical Memory: EMPTY\n");
     }
 
-    vga::console_write_bytes(b"Input: ");
-
     #[cfg(not(feature = "host-test"))]
     unsafe {
         core::ptr::write_volatile(
