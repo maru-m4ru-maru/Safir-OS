@@ -137,8 +137,38 @@
 
     let enabled = Boolean(options.enabled);
     let composing = false;
-    let suppressedComposition = "";
-    let suppressionTimer = 0;
+    let pendingComposition = "";
+    let compositionTimer = 0;
+
+    const positionTextarea = () => {
+      if (!textarea.style || !terminal.element || !terminal.buffer) {
+        return;
+      }
+
+      const screen = terminal.element.querySelector(".xterm-screen");
+      const cursor = terminal.buffer.active;
+
+      if (!screen || !cursor) {
+        return;
+      }
+
+      const screenRect = screen.getBoundingClientRect();
+      const terminalRect = terminal.element.getBoundingClientRect();
+      const cols = Math.max(1, terminal.cols || 80);
+      const rows = Math.max(1, terminal.rows || 24);
+      const cellWidth = screenRect.width / cols;
+      const cellHeight = screenRect.height / rows;
+      const column = Math.max(0, Math.min(cursor.cursorX, cols - 1));
+      const row = Math.max(0, Math.min(cursor.cursorY, rows - 1));
+
+      textarea.style.left =
+        (screenRect.left - terminalRect.left + column * cellWidth) + "px";
+      textarea.style.top =
+        (screenRect.top - terminalRect.top + row * cellHeight) + "px";
+      textarea.style.width = Math.max(1, cellWidth) + "px";
+      textarea.style.height = Math.max(1, cellHeight) + "px";
+      textarea.style.lineHeight = Math.max(1, cellHeight) + "px";
+    };
 
     const send = data => {
       if (enabled && data) {
@@ -160,13 +190,15 @@
       }
     };
 
-    const clearCompositionSuppression = () => {
-      suppressedComposition = "";
-
-      if (suppressionTimer) {
-        clearTimeout(suppressionTimer);
-        suppressionTimer = 0;
+    const flushPendingComposition = () => {
+      if (compositionTimer) {
+        clearTimeout(compositionTimer);
+        compositionTimer = 0;
       }
+
+      const text = pendingComposition;
+      pendingComposition = "";
+      send(text);
     };
 
     const onKeyDown = event => {
@@ -199,12 +231,14 @@
 
     const onCompositionStart = event => {
       stop(event);
-      clearCompositionSuppression();
+      flushPendingComposition();
       composing = true;
+      positionTextarea();
     };
 
     const onCompositionUpdate = event => {
       stop(event);
+      positionTextarea();
     };
 
     const onCompositionEnd = event => {
@@ -213,18 +247,13 @@
 
       const committed = typeof event.data === "string"
         ? event.data
-        : "";
+        : textarea.value;
+
+      clearTextarea();
 
       if (committed) {
-        send(committed);
-        suppressedComposition = committed;
-        suppressionTimer = setTimeout(() => {
-          suppressedComposition = "";
-          suppressionTimer = 0;
-        }, 100);
-        clearTextarea();
-      } else {
-        clearTextarea();
+        pendingComposition = committed;
+        compositionTimer = setTimeout(flushPendingComposition, 0);
       }
     };
 
@@ -236,20 +265,29 @@
       }
 
       const value = textarea.value;
+      const inputType = String(event.inputType || "").toLowerCase();
 
-      if (
-        suppressedComposition &&
-        (
-          String(event.inputType || "").toLowerCase().includes("composition") ||
-          value === suppressedComposition
-        )
-      ) {
-        clearCompositionSuppression();
-        clearTextarea();
-        return;
+      if (pendingComposition) {
+        if (
+          inputType.includes("composition") ||
+          value === pendingComposition
+        ) {
+          const committed = value || pendingComposition;
+
+          if (compositionTimer) {
+            clearTimeout(compositionTimer);
+            compositionTimer = 0;
+          }
+
+          pendingComposition = "";
+          clearTextarea();
+          send(committed);
+          return;
+        }
+
+        flushPendingComposition();
       }
 
-      clearCompositionSuppression();
       clearTextarea();
       send(value);
     };
@@ -269,6 +307,20 @@
         send(text);
       }
     };
+
+    const disposables = [];
+
+    if (typeof terminal.onCursorMove === "function") {
+      disposables.push(terminal.onCursorMove(positionTextarea));
+    }
+
+    if (typeof terminal.onResize === "function") {
+      disposables.push(terminal.onResize(positionTextarea));
+    }
+
+    if (typeof terminal.onRender === "function") {
+      disposables.push(terminal.onRender(positionTextarea));
+    }
 
     textarea.addEventListener("keydown", onKeyDown, true);
     textarea.addEventListener("keyup", onKeyUp, true);
@@ -295,7 +347,13 @@
 
         if (!enabled) {
           composing = false;
-          clearCompositionSuppression();
+
+          if (compositionTimer) {
+            clearTimeout(compositionTimer);
+            compositionTimer = 0;
+          }
+
+          pendingComposition = "";
           clearTextarea();
         }
       },
@@ -313,7 +371,17 @@
         textarea.removeEventListener("compositionend", onCompositionEnd, true);
         textarea.removeEventListener("input", onInput, true);
         textarea.removeEventListener("paste", onPaste, true);
-        clearCompositionSuppression();
+
+        if (compositionTimer) {
+          clearTimeout(compositionTimer);
+          compositionTimer = 0;
+        }
+
+        pendingComposition = "";
+
+        for (const disposable of disposables) {
+          disposable.dispose();
+        }
       }
     };
   }
