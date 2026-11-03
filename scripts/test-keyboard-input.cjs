@@ -157,8 +157,6 @@ async function run() {
 
   terminal.textarea.dispatch("compositionupdate", { data: "日本" });
   terminal.textarea.dispatch("compositionend", { data: "日本" });
-  assert.equal(readSlave(slave), "日本");
-  assert.equal(terminal.textarea.value, "");
 
   terminal.textarea.value = "日本";
   terminal.textarea.dispatch("input", {
@@ -166,7 +164,13 @@ async function run() {
     inputType: "insertFromComposition",
     isComposing: false
   });
-  assert.equal(readSlave(slave), "");
+  assert.equal(readSlave(slave), "日本");
+  assert.equal(terminal.textarea.value, "");
+
+  terminal.textarea.dispatch("compositionstart");
+  terminal.textarea.dispatch("compositionend", { data: "かな" });
+  await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(readSlave(slave), "かな");
 
   typeText(terminal.textarea, "echo 日本語");
   assert.equal(readSlave(slave), "echo 日本語");
