@@ -107,7 +107,7 @@ assert.deepEqual(
   Buffer.from("日本語")
 );
 
-slave.write(Buffer.from("SafirOS output"));
+slave.write("SafirOS output");
 assert.equal(terminalOutput, "SafirOS output");
 
 master.dispose();
