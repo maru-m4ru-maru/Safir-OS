@@ -296,8 +296,7 @@ pub extern "C" fn preempt_task_a() -> ! {
                     crate::vga::console_write_prompt(crate::shell::PROMPT);
                 }
                 crate::shell::InputAction::Interrupt => {
-                    crate::vga::console_end_input_line();
-                    crate::vga::console_write_bytes(b"^C\n");
+                    crate::vga::console_finish_input_line(b"^C");
                     crate::vga::console_write_prompt(crate::shell::PROMPT);
                 }
                 crate::shell::InputAction::ClearScreen => {
@@ -311,8 +310,7 @@ pub extern "C" fn preempt_task_a() -> ! {
                 }
                 crate::shell::InputAction::Nothing => {}
                 crate::shell::InputAction::Overflow => {
-                    crate::vga::console_end_input_line();
-                    crate::vga::console_write_bytes(b"\nLine too long\n");
+                    crate::vga::console_finish_input_line(b"Line too long");
                     shell.clear();
                     crate::vga::console_write_prompt(crate::shell::PROMPT);
                 }

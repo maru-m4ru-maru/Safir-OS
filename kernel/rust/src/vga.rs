@@ -198,6 +198,25 @@ impl Writer {
         self.input_anchor = Some((row, column));
     }
 
+    fn finish_input_line(&mut self, message: &[u8]) {
+        let (row, column) = self.input_anchor.unwrap_or((self.row, 0));
+
+        serial_write_bytes(b"\r\x1B[K");
+        serial_write_bytes(message);
+        serial_write_bytes(b"\r\n");
+
+        for screen_column in column..VGA_WIDTH {
+            self.put_at(row, screen_column, b' ');
+        }
+
+        let mut message_column = column;
+        Self::write_vga_text(self, row, &mut message_column, message);
+
+        self.row = if row + 1 < VGA_HEIGHT { row + 1 } else { row };
+        self.column = 0;
+        self.input_anchor = None;
+    }
+
     fn write_vga_text(
         &self,
         row: usize,
@@ -286,6 +305,13 @@ pub fn console_end_input_line() {
     unsafe {
         let writer = &mut *core::ptr::addr_of_mut!(CONSOLE_WRITER);
         writer.input_anchor = None;
+    }
+}
+
+pub fn console_finish_input_line(message: &[u8]) {
+    unsafe {
+        let writer = &mut *core::ptr::addr_of_mut!(CONSOLE_WRITER);
+        writer.finish_input_line(message);
     }
 }
 
