@@ -30,25 +30,26 @@ const terminal=new Terminal({
   scrollback:10000,
   theme:{
     background:"#000000",
-    foreground:"#d4d4d4",
+    foreground:"#ffffff",
     cursor:"#ffffff",
     cursorAccent:"#000000",
-    selectionBackground:"#333333",
-    black:"#171b22",
-    red:"#e06c75",
-    green:"#98c379",
-    yellow:"#e5c07b",
-    blue:"#61afef",
-    magenta:"#c678dd",
-    cyan:"#56b6c2",
-    white:"#dce3ed",
-    brightBlack:"#5c6370",
-    brightRed:"#e06c75",
-    brightGreen:"#98c379",
-    brightYellow:"#e5c07b",
-    brightBlue:"#61afef",
-    brightMagenta:"#c678dd",
-    brightCyan:"#56b6c2",
+    selectionBackground:"#ffffff",
+    selectionForeground:"#000000",
+    black:"#000000",
+    red:"#ffffff",
+    green:"#ffffff",
+    yellow:"#ffffff",
+    blue:"#ffffff",
+    magenta:"#ffffff",
+    cyan:"#ffffff",
+    white:"#ffffff",
+    brightBlack:"#ffffff",
+    brightRed:"#ffffff",
+    brightGreen:"#ffffff",
+    brightYellow:"#ffffff",
+    brightBlue:"#ffffff",
+    brightMagenta:"#ffffff",
+    brightCyan:"#ffffff",
     brightWhite:"#ffffff"
   }
 });
@@ -56,6 +57,16 @@ const terminal=new Terminal({
 const fitAddon=new FitAddon.FitAddon();
 terminal.loadAddon(fitAddon);
 terminal.open(terminalMount);
+
+const originalTerminalWrite=terminal.write.bind(terminal);
+terminal.write=function(data,onWrite){
+  const output=typeof data==="string"
+    ?data
+    :guestDecoder.decode(data,{stream:true});
+
+  recordGuestOutput(output);
+  return originalTerminalWrite(data,onWrite);
+};
 
 function fitTerminal(){
   try{
@@ -71,14 +82,6 @@ requestAnimationFrame(fitTerminal);
 terminalMount.addEventListener("mousedown",()=>{
   terminal.focus();
 });
-
-window.addEventListener("keydown",event=>{
-  if(event.ctrlKey&&event.shiftKey&&event.code==="KeyR"){
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    window.location.href=window.location.pathname+"?reload="+Date.now();
-  }
-},true);
 
 function setStatus(message){
   status.textContent=message;
@@ -214,28 +217,6 @@ moduleConfig.preRun.push(module=>{
     });
 });
 
-function createTerminalAdapter(){
-  return {
-    write(data,onConsumed){
-      const output=typeof data==="string"
-        ?data
-        :guestDecoder.decode(data,{stream:true});
-
-      recordGuestOutput(output);
-      terminal.write(data,onConsumed);
-    },
-    onData(callback){
-      return terminal.onData(callback);
-    },
-    onBinary(callback){
-      return terminal.onBinary(callback);
-    },
-    onResize(callback){
-      return terminal.onResize(callback);
-    }
-  };
-}
-
 async function waitForRuntime(startedAt){
   while(true){
     if(guestOutput.includes(expected)){
@@ -288,7 +269,7 @@ async function boot(){
     ptyMaster=pty.master;
     moduleConfig.pty=pty.slave;
 
-    if(!moduleConfig.pty||typeof moduleConfig.pty.onSignal!=="function"){
+    if(!moduleConfig.pty||typeof moduleConfig.pty.ioctl!=="function"){
       throw new Error("QEMU PTY slave initialization failed");
     }
 
@@ -297,7 +278,7 @@ async function boot(){
     termios.lflag&=~(0x0002|0x0008);
     moduleConfig.pty.ioctl("TCSETS",termios);
 
-    ptyMaster.activate(createTerminalAdapter());
+    terminal.loadAddon(ptyMaster);
     ptyActivated=true;
 
     appendSerial("[webvm] Terminal connected to QEMU serial console\r\n");
