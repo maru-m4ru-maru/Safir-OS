@@ -279,23 +279,15 @@ pub extern "C" fn preempt_task_a() -> ! {
 
     loop {
         if let Some(input) = crate::keyboard::pop_input() {
-            let echo_input = input.source == crate::keyboard::InputSource::Ps2;
-
             match shell.feed_byte(input.byte) {
                 crate::shell::InputAction::Character(byte) => {
-                    if echo_input {
-                        crate::vga::console_write_byte(byte);
-                    }
+                    crate::vga::console_write_byte(byte);
                 }
                 crate::shell::InputAction::Backspace => {
-                    if echo_input {
-                        crate::vga::console_write_byte(0x08);
-                    }
+                    crate::vga::console_write_byte(0x08);
                 }
                 crate::shell::InputAction::Submit => {
-                    if echo_input {
-                        crate::vga::console_write_byte(b'\n');
-                    }
+                    crate::vga::console_write_byte(b'\n');
                     let command = shell.command();
                     run_shell_command(command);
                     shell.clear();
@@ -303,15 +295,9 @@ pub extern "C" fn preempt_task_a() -> ! {
                 }
                 crate::shell::InputAction::Nothing => {}
                 crate::shell::InputAction::Overflow => {
-                    if echo_input {
-                        crate::vga::console_write_bytes(
-                            b"\nLine too long\nsafiros> ",
-                        );
-                    } else {
-                        crate::vga::console_write_bytes(
-                            b"\r\nLine too long\r\nsafiros> ",
-                        );
-                    }
+                    crate::vga::console_write_bytes(
+                        b"\r\nLine too long\r\nsafiros> ",
+                    );
                     shell.clear();
                 }
             }
