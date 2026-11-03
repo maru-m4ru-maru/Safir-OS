@@ -33,6 +33,9 @@ jobs:
       - name: Test xterm IME textarea diff handling
         run: node scripts/test-xterm-ime-fix.cjs
 
+      - name: Test COI service-worker lifecycle
+        run: node scripts/test-coi-serviceworker.cjs
+
       - name: Test Rust kernel logic
         run: |
           cargo test --features host-test --lib --manifest-path kernel/rust/Cargo.toml
