@@ -3,6 +3,8 @@ name: Build SafirOS
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -29,9 +31,6 @@ jobs:
 
       - name: Test browser PTY line discipline
         run: node scripts/test-web-pty.cjs
-
-      - name: Test independent keyboard input bridge
-        run: node scripts/test-keyboard-input.cjs
 
       - name: Test COI service-worker lifecycle
         run: node scripts/test-coi-serviceworker.cjs
@@ -231,7 +230,7 @@ jobs:
               output_at, shell_output = read_until(expected, 5, response_start)
               prompt_at, shell_output = read_until(b"safiros> ", 5, output_at + len(expected))
               print(shell_output[command_start:].split("safiros> ", 1)[0])
-              print("Characters echoed immediately; command completed and prompt returned.")
+              print("Line redraw completed; command completed and prompt returned.")
 
           command_start = len(received)
 
@@ -242,7 +241,7 @@ jobs:
 
           backspace_start = len(received)
           serial.sendall(b"\x7f")
-          read_until(b"\x08 \x08", 2, backspace_start)
+          read_until(b"safiros> help\x1b[K", 2, backspace_start)
 
           response_start = len(received)
           serial.sendall(b"\r")
@@ -260,11 +259,8 @@ jobs:
           print("DEL was handled as Backspace and the edited command executed.")
 
           command_start = len(received)
-
-          for byte in "echo 日本語".encode("utf-8"):
-              input_start = len(received)
-              serial.sendall(bytes([byte]))
-              read_until(bytes([byte]), 2, input_start)
+          serial.sendall("echo 日本語".encode("utf-8"))
+          read_until("safiros> echo 日本語\x1b[K".encode("utf-8"), 5, command_start)
 
           response_start = len(received)
           serial.sendall(b"\r")
@@ -283,9 +279,13 @@ jobs:
               serial.sendall(bytes([byte]))
               read_until(bytes([byte]), 2, input_start)
 
+          cursor_move_start = len(received)
+          serial.sendall(b"\x1b[D")
+          read_until(b"safiros> help\x1b[K\x1b[D", 5, cursor_move_start)
+
           interrupt_start = len(received)
           serial.sendall(b"\x03")
-          read_until(b"^C\r\nsafiros> ", 5, interrupt_start)
+          read_until(b"^C\r\n\rsafiros> ", 5, interrupt_start)
           print("Ctrl+C cleared the current shell line and returned to the prompt.")
 
           serial.sendall(b"about\r")

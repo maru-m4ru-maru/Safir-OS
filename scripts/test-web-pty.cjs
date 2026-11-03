@@ -70,6 +70,46 @@ assert.equal(
   "7f"
 );
 
+for (const sequence of [
+  "\x1b[A",
+  "\x1b[B",
+  "\x1b[C",
+  "\x1b[D",
+  "\x1b[H",
+  "\x1b[F",
+  "\x1b[3~",
+  "\x1b[1;5D",
+  "\x1bOA",
+  "\x1bOB",
+  "\x1bOC",
+  "\x1bOD",
+  "\x03",
+  "\x04",
+  "\x01",
+  "\x05",
+  "\x0b",
+  "\x15",
+  "\x17",
+  "\t"
+]) {
+  sendData(sequence);
+  assert.equal(slave.readable, true);
+  assert.deepEqual(
+    Buffer.from(slave.read()),
+    Buffer.from(sequence)
+  );
+}
+
+sendData("日本語");
+assert.equal(slave.readable, true);
+assert.deepEqual(
+  Buffer.from(slave.read()),
+  Buffer.from("日本語")
+);
+
+slave.write("SafirOS output");
+assert.equal(terminalOutput, "SafirOS output");
+
 master.dispose();
 
 process.stdout.write("Browser PTY raw input forwarding passed.\n");
