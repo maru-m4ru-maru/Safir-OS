@@ -268,7 +268,7 @@ async function boot(){
 
     const termios=moduleConfig.pty.ioctl("TCGETS");
     termios.iflag|=0x0100;
-    termios.lflag&=~(0x0002|0x0008);
+    termios.lflag|=0x0002|0x0008;
     moduleConfig.pty.ioctl("TCSETS",termios);
 
     terminal.loadAddon(ptyMaster);
