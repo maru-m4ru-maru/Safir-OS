@@ -279,6 +279,10 @@ jobs:
               serial.sendall(bytes([byte]))
               read_until(bytes([byte]), 2, input_start)
 
+          cursor_move_start = len(received)
+          serial.sendall(b"\x1b[D")
+          read_until(b"safiros> help\x1b[K\x1b[D", 5, cursor_move_start)
+
           interrupt_start = len(received)
           serial.sendall(b"\x03")
           read_until(b"^C\r\n\rsafiros> ", 5, interrupt_start)
