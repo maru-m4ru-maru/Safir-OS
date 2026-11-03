@@ -282,10 +282,9 @@ async function boot(){
     await initEmscriptenModule(moduleConfig);
 
     if(moduleConfig["TTY"]&&moduleConfig["TTY"].stream_ops){
-      const oldPoll=moduleConfig["TTY"].stream_ops.poll;
       const pty=moduleConfig["pty"];
 
-      moduleConfig["TTY"].stream_ops.poll=function(){
+      moduleConfig["TTY"].stream_ops.poll=function(stream,timeout){
         return (pty.readable?1:0)|(pty.writable?4:0);
       };
 
