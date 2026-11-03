@@ -278,16 +278,24 @@ pub extern "C" fn preempt_task_a() -> ! {
     }
 
     loop {
-        if let Some(byte) = crate::keyboard::pop_byte() {
-            match shell.feed_byte(byte) {
+        if let Some(input) = crate::keyboard::pop_input() {
+            let echo_input = input.source == crate::keyboard::InputSource::Ps2;
+
+            match shell.feed_byte(input.byte) {
                 crate::shell::InputAction::Character(byte) => {
-                    crate::vga::console_write_byte(byte);
+                    if echo_input {
+                        crate::vga::console_write_byte(byte);
+                    }
                 }
                 crate::shell::InputAction::Backspace => {
-                    crate::vga::console_write_byte(0x08);
+                    if echo_input {
+                        crate::vga::console_write_byte(0x08);
+                    }
                 }
                 crate::shell::InputAction::Submit => {
-                    crate::vga::console_write_byte(b'\n');
+                    if echo_input {
+                        crate::vga::console_write_byte(b'\n');
+                    }
                     let command = shell.command();
                     run_shell_command(command);
                     shell.clear();
@@ -295,9 +303,15 @@ pub extern "C" fn preempt_task_a() -> ! {
                 }
                 crate::shell::InputAction::Nothing => {}
                 crate::shell::InputAction::Overflow => {
-                    crate::vga::console_write_bytes(
-                        b"\nLine too long\nsafiros> ",
-                    );
+                    if echo_input {
+                        crate::vga::console_write_bytes(
+                            b"\nLine too long\nsafiros> ",
+                        );
+                    } else {
+                        crate::vga::console_write_bytes(
+                            b"\r\nLine too long\r\nsafiros> ",
+                        );
+                    }
                     shell.clear();
                 }
             }
