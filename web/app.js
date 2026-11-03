@@ -17,7 +17,6 @@ let guestOutput="";
 let ptyMaster=null;
 let ptyActivated=false;
 let lastDependencyCount=-1;
-let inputReady=false;
 
 const guestDecoder=new TextDecoder();
 
@@ -59,7 +58,9 @@ const terminal=new Terminal({
 
 terminal.open(terminalMount);
 
-
+const keyboardInput=window.SafirOSKeyboardInput
+  ?window.SafirOSKeyboardInput.install(terminal,{enabled:false})
+  :null;
 
 const originalTerminalWrite=terminal.write.bind(terminal);
 terminal.write=function(data,onWrite){
@@ -72,7 +73,9 @@ terminal.write=function(data,onWrite){
 };
 
 terminalMount.addEventListener("mousedown",()=>{
-  terminal.focus();
+  if(keyboardInput&&keyboardInput.enabled){
+    keyboardInput.focus();
+  }
 });
 
 function setStatus(message){
@@ -109,9 +112,9 @@ function recordGuestOutput(data){
     setRuntimeState("Running","running");
   }
 
-  if(guestOutput.includes(shellPrompt)&&!inputReady){
-    inputReady=true;
-    requestAnimationFrame(()=>terminal.focus());
+  if(guestOutput.includes(shellPrompt)&&keyboardInput&&!keyboardInput.enabled){
+    keyboardInput.setEnabled(true);
+    requestAnimationFrame(()=>keyboardInput.focus());
   }
 }
 
@@ -239,6 +242,10 @@ async function boot(){
     setStatus("Enabling shared memory...");
     setProgress(2);
 
+    if(!keyboardInput){
+      throw new Error("Independent keyboard input bridge is unavailable");
+    }
+
     if(!window.COI_READY){
       throw new Error("Cross-origin isolation bootstrap is unavailable");
     }
@@ -315,7 +322,9 @@ async function boot(){
     setRuntimeState("Running","running");
     setStatus("SafirOS kernel reached Long Mode");
 
-    terminal.focus();
+    if(keyboardInput.enabled){
+      keyboardInput.focus();
+    }
   }catch(error){
     appendSerial("\r\n[boot error] "+error.message+"\r\n");
     setStatus("SafirOS startup failed · "+error.message);
