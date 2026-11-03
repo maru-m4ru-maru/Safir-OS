@@ -38,7 +38,8 @@
   }
 
   function install(terminal) {
-    const helper = terminal && terminal._compositionHelper;
+    const core = terminal && (terminal._core || terminal);
+    const helper = core && core._compositionHelper;
 
     if (
       !helper ||
