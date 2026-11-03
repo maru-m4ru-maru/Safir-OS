@@ -7,7 +7,7 @@ const runtimeState=document.getElementById("runtime_state");
 const runtimeLabel=document.getElementById("runtime_label");
 const footerStatus=document.getElementById("footer_status");
 const terminalMount=document.getElementById("terminal_mount");
-const clearTerminalButton=document.getElementById("clear_terminal");
+const terminalDimensions=document.getElementById("terminal_dimensions");
 
 const siteBase=window.SAFIROS_BASE||"./";
 const qemuBase=siteBase+"qemu/";
@@ -61,6 +61,9 @@ const terminal=new Terminal({
 
 terminal.loadAddon(fitAddon);
 terminal.open(terminalMount);
+terminal.onResize(({cols,rows})=>{
+  terminalDimensions.textContent=cols+" × "+rows;
+});
 
 const imeInputPatchInstalled=Boolean(
   window.SafirOSImeFix &&
@@ -81,10 +84,6 @@ terminalMount.addEventListener("pointerdown",()=>{
   terminal.focus();
 });
 
-clearTerminalButton.addEventListener("click",()=>{
-  terminal.clear();
-  terminal.focus();
-});
 
 function setStatus(message){
   footerStatus.textContent=message;
