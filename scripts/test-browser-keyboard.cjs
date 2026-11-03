@@ -70,6 +70,7 @@ const html = [
   "    window.__dispatchInput = (data,options={}) => {",
   '      const textarea = document.querySelector(".xterm-helper-textarea");',
   "      textarea.value = options.value === undefined ? data : options.value;",
+  '      if (typeof textarea.setSelectionRange === "function") textarea.setSelectionRange(textarea.value.length,textarea.value.length);',
   '      textarea.dispatchEvent(new InputEvent("input",{bubbles:true,composed:options.composed !== false,data,inputType:options.inputType || "insertText",isComposing:Boolean(options.isComposing)}));',
   "    };",
   "    window.__dispatchComposition = (type,data=\"\") => {",
@@ -170,32 +171,47 @@ async function main() {
     await page.evaluate(() => {
       window.__clearReceived();
       window.__dispatchComposition("compositionstart");
+      window.__dispatchComposition("compositionupdate","に");
       window.__dispatchInput("に",{value:"に",inputType:"insertCompositionText",isComposing:true});
       window.__dispatchComposition("compositionupdate","日本語");
       window.__dispatchInput("日本語",{value:"日本語",inputType:"insertCompositionText",isComposing:true});
       window.__dispatchComposition("compositionend","日本語");
-      window.__dispatchInput("日本語",{value:"日本語",inputType:"insertText"});
     });
-    await page.waitForFunction(() => window.__received.join("") === "日本語");
     await page.waitForTimeout(20);
-    assert.equal(await page.evaluate(() => window.__received.join("")),"日本語");
+    const nativeComposition = await page.evaluate(() => ({
+      received:window.__received.join(""),
+      textareaValue:window.__terminal.textarea.value,
+      selectionEnd:window.__terminal.textarea.selectionEnd,
+      events:window.__nativeCompositionEvents,
+      compositionView:document.querySelector(".composition-view")?.className || ""
+    }));
+    assert.equal(
+      nativeComposition.received,
+      "日本語",
+      "Native IME commit mismatch: " + JSON.stringify(nativeComposition)
+    );
     assert.equal(await page.evaluate(() => window.__readPty()),"日本語");
     assert.deepEqual(
-      await page.evaluate(() => window.__nativeCompositionEvents),
-      {start:1,update:1,end:1,input:2}
+      nativeComposition.events,
+      {start:1,update:2,end:1,input:2}
     );
 
     await page.evaluate(() => {
       window.__clearReceived();
       window.__dispatchComposition("compositionstart");
-      window.__dispatchInput("かな",{value:"かな",inputType:"insertCompositionText",isComposing:true});
       window.__dispatchComposition("compositionupdate","かな");
+      window.__dispatchInput("かな",{value:"かな",inputType:"insertCompositionText",isComposing:true});
+      window.__dispatchComposition("compositionupdate","");
+      window.__dispatchInput("",{value:"",inputType:"deleteCompositionText",isComposing:true});
       window.__dispatchComposition("compositionend","");
     });
-    await page.waitForFunction(() => window.__received.join("") === "かな");
     await page.waitForTimeout(20);
-    assert.equal(await page.evaluate(() => window.__received.join("")),"かな");
-    assert.equal(await page.evaluate(() => window.__readPty()),"かな");
+    assert.equal(
+      await page.evaluate(() => window.__received.join("")),
+      "",
+      "Cancelled composition must not be sent to the PTY"
+    );
+    assert.equal(await page.evaluate(() => window.__readPty()),"");
 
     await page.evaluate(() => {
       window.__clearReceived();
