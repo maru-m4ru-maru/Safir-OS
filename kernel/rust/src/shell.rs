@@ -37,7 +37,7 @@ impl Shell {
     pub fn feed_byte(&mut self, byte: u8) -> InputAction {
         match byte {
             b'\n' => InputAction::Submit,
-            0x08 => {
+            0x08 | 0x7F => {
                 if self.length == 0 {
                     InputAction::Nothing
                 } else {
