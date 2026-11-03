@@ -113,6 +113,7 @@ function recordGuestOutput(data){
     if(bootScreen.isConnected){
       bootScreen.remove();
     }
+    terminalMount.classList.remove("is-booting");
 
     setProgress(100);
     setStatus("Kernel reached Long Mode");
@@ -279,11 +280,11 @@ async function boot(){
     setStatus("Loading QEMU ROM loader...");
     setProgress(5);
 
-    if(!window.SAFIROS_ROM_READY){
+    if(typeof window.loadSafirosRom!=="function"){
       throw new Error("QEMU ROM loader was not configured");
     }
 
-    await window.SAFIROS_ROM_READY;
+    await window.loadSafirosRom();
 
     if(typeof openpty!=="function"){
       throw new Error("QEMU PTY is unavailable");
@@ -353,6 +354,7 @@ async function boot(){
     if(bootScreen.isConnected){
       bootScreen.remove();
     }
+    terminalMount.classList.remove("is-booting");
     setStatus("SafirOS startup failed · "+error.message);
     setRuntimeState("Error","error");
     terminal.focus();
