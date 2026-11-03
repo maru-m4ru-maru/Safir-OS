@@ -91,7 +91,6 @@ jobs:
           test -f site/keyboard-input.js
           test -f site/terminal/xterm.js
           test -f site/terminal/xterm.css
-          test -f site/terminal/addon-fit-LICENSE
           test -f site/terminal/xterm-LICENSE
           test -f site/coi-serviceworker.js
           test -f site/qemu/xterm-pty.js
