@@ -38,7 +38,6 @@ jobs:
           npm install --prefix build/xterm --no-save --no-package-lock @xterm/xterm@5.5.0
           cp build/xterm/node_modules/@xterm/xterm/lib/xterm.js site/terminal/xterm.js
           cp build/xterm/node_modules/@xterm/xterm/css/xterm.css site/terminal/xterm.css
-          cp build/xterm/node_modules/@xterm/addon-fit/LICENSE site/terminal/addon-fit-LICENSE
           cp build/xterm/node_modules/@xterm/xterm/LICENSE site/terminal/xterm-LICENSE
 
       - name: Build bootloader
