@@ -241,11 +241,11 @@ jobs:
               read_until(bytes([byte]), 2, input_start)
 
           backspace_start = len(received)
-          serial.sendall(b"\\x7f")
-          read_until(b"\\x08 \\x08", 2, backspace_start)
+          serial.sendall(b"\x7f")
+          read_until(b"\x08 \x08", 2, backspace_start)
 
           response_start = len(received)
-          serial.sendall(b"\\r")
+          serial.sendall(b"\r")
           output_at, shell_output = read_until(
               b"Commands: help clear about echo",
               5,
