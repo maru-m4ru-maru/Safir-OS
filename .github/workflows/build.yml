@@ -30,6 +30,9 @@ jobs:
       - name: Test browser PTY line discipline
         run: node scripts/test-web-pty.cjs
 
+      - name: Test xterm IME textarea diff handling
+        run: node scripts/test-xterm-ime-fix.cjs
+
       - name: Test Rust kernel logic
         run: |
           cargo test --features host-test --lib --manifest-path kernel/rust/Cargo.toml
