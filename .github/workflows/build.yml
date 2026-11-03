@@ -29,6 +29,12 @@ jobs:
           nasm -dSAFIROS_QEMU_TEST -f bin boot/boot.asm -o build/boot-qemu.bin
           test "$(stat -c%s build/boot-qemu.bin)" -eq 512
 
+      - name: Test browser keyboard and IME input
+        run: |
+          npm install --prefix build/browser-test --no-save --no-package-lock --silent @xterm/xterm@5.5.0 playwright@1.55.0
+          ./build/browser-test/node_modules/.bin/playwright install --with-deps chromium
+          SAFIROS_TEST_MODULES="$PWD/build/browser-test/node_modules" node scripts/test-browser-keyboard.cjs
+
       - name: Test browser PTY line discipline
         run: node scripts/test-web-pty.cjs
 
