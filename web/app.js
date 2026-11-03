@@ -285,12 +285,8 @@ async function boot(){
       const oldPoll=moduleConfig["TTY"].stream_ops.poll;
       const pty=moduleConfig["pty"];
 
-      moduleConfig["TTY"].stream_ops.poll=function(stream,timeout){
-        if(!pty.readable){
-          return (pty.readable?1:0)|(pty.writable?4:0);
-        }
-
-        return oldPoll.call(stream,timeout);
+      moduleConfig["TTY"].stream_ops.poll=function(){
+        return (pty.readable?1:0)|(pty.writable?4:0);
       };
 
       appendSerial("[webvm] PTY polling enabled\r\n");
