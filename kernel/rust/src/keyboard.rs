@@ -216,9 +216,21 @@ mod tests {
 pub const KEYBOARD_HOOK_SLOT: usize = 0x0005F010;
 const KEYBOARD_BUFFER_CAPACITY: usize = 64;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum InputSource {
+    Ps2,
+    Serial,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct KeyInput {
+    pub byte: u8,
+    pub source: InputSource,
+}
+
 pub struct KeyboardInput<const N: usize> {
     decoder: KeyboardDecoder,
-    buffer: RingBuffer<N>,
+    buffer: RingBuffer<KeyInput>,
 }
 
 impl<const N: usize> KeyboardInput<N> {
@@ -234,7 +246,10 @@ impl<const N: usize> KeyboardInput<N> {
             return false;
         };
 
-        self.buffer.push(byte)
+        self.buffer.push(KeyInput {
+            byte,
+            source: InputSource::Ps2,
+        })
     }
 
     pub fn feed_serial_byte(&mut self, byte: u8) -> bool {
@@ -244,11 +259,18 @@ impl<const N: usize> KeyboardInput<N> {
             value => value,
         };
 
-        self.buffer.push(byte)
+        self.buffer.push(KeyInput {
+            byte,
+            source: InputSource::Serial,
+        })
+    }
+
+    pub fn pop_event(&mut self) -> Option<KeyInput> {
+        self.buffer.pop()
     }
 
     pub fn pop(&mut self) -> Option<u8> {
-        self.buffer.pop()
+        self.pop_event().map(|input| input.byte)
     }
 
     pub const fn len(&self) -> usize {
@@ -307,7 +329,7 @@ unsafe fn drain_serial_input<const N: usize>(input: &mut KeyboardInput<N>) {
 }
 
 #[cfg(not(feature = "host-test"))]
-pub fn pop_byte() -> Option<u8> {
+pub fn pop_input() -> Option<KeyInput> {
     let flags: u64;
 
     unsafe {
@@ -321,22 +343,26 @@ pub fn pop_byte() -> Option<u8> {
 
         let input = &mut *core::ptr::addr_of_mut!(KEYBOARD_INPUT);
         drain_serial_input(input);
-        let byte = input.pop();
+        let event = input.pop_event();
 
         if flags & 0x200 != 0 {
             asm!("sti", options(nomem, nostack, preserves_flags));
         }
 
-        byte
+        event
     }
 }
 
 #[cfg(feature = "host-test")]
-pub fn pop_byte() -> Option<u8> {
+pub fn pop_input() -> Option<KeyInput> {
     unsafe {
         let input = &mut *core::ptr::addr_of_mut!(KEYBOARD_INPUT);
-        input.pop()
+        input.pop_event()
     }
+}
+
+pub fn pop_byte() -> Option<u8> {
+    pop_input().map(|input| input.byte)
 }
 
 #[cfg(test)]
@@ -376,6 +402,29 @@ mod input_tests {
         assert_eq!(input.pop(), Some(b'a'));
         assert_eq!(input.pop(), Some(b'b'));
         assert_eq!(input.pop(), None);
+    }
+
+    #[test]
+    fn input_queue_preserves_input_source() {
+        let mut input = KeyboardInput::<4>::new();
+
+        assert!(input.feed_scancode(0x1E));
+        assert_eq!(
+            input.pop_event(),
+            Some(super::KeyInput {
+                byte: b'a',
+                source: super::InputSource::Ps2,
+            })
+        );
+
+        assert!(input.feed_serial_byte(b'x'));
+        assert_eq!(
+            input.pop_event(),
+            Some(super::KeyInput {
+                byte: b'x',
+                source: super::InputSource::Serial,
+            })
+        );
     }
 
     #[test]
