@@ -16,7 +16,11 @@ function createTerminal(initialValue) {
   };
 
   return {
-    terminal: { _compositionHelper: helper },
+    terminal: {
+      _core: {
+        _compositionHelper: helper
+      }
+    },
     helper,
     events
   };
