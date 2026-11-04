@@ -34,6 +34,7 @@
     let dataVersion = 0;
     let lastTextareaValue = textarea.value;
     let beforeInputValue = null;
+    let activeInputRecord = null;
 
     const pendingKeys = [];
     const pending229 = [];
@@ -146,15 +147,13 @@
         pending => pending.key === inputData
       );
       const previousValueIndex = pending229.findIndex(
-        pending => pending.value === lastTextareaValue
+        pending => pending.value === lastTextareaValue && pending.fallbackPending
       );
       const selected229Index = pending229Index !== -1
         ? pending229Index
         : previousValueIndex !== -1
           ? previousValueIndex
-          : pending229.length > 0
-            ? 0
-            : -1;
+          : pending229.findIndex(pending => pending.fallbackPending);
       const pending229Entry = selected229Index !== -1
         ? pending229.splice(selected229Index, 1)[0]
         : null;
@@ -163,7 +162,9 @@
         : beforeInputValue !== null
           ? beforeInputValue
           : lastTextareaValue;
+      const inputRecord = {followedBy229:false};
 
+      activeInputRecord = inputRecord;
       beforeInputValue = null;
 
       Promise.resolve().then(() => {
@@ -173,7 +174,7 @@
           terminal.input(inputData, true);
         }
 
-        if (!xtermHandledInput || pending229Entry) {
+        if (!xtermHandledInput || (pending229Entry && pending229Entry.fallbackPending)) {
           textarea.value = previousValue;
 
           if (typeof textarea.setSelectionRange === "function") {
@@ -188,6 +189,10 @@
           lastTextareaValue = previousValue;
         } else {
           lastTextareaValue = textarea.value;
+        }
+
+        if (activeInputRecord === inputRecord) {
+          activeInputRecord = null;
         }
       });
     };
@@ -213,13 +218,23 @@
         !composing &&
         !compositionCommitPending
       ) {
+        if (activeInputRecord) {
+          activeInputRecord.followedBy229 = true;
+          return false;
+        }
+
         const pending = {
           key:event.key,
           code:event.code,
-          value:textarea.value
+          value:textarea.value,
+          fallbackPending:true
         };
 
         pending229.push(pending);
+
+        setTimeout(() => {
+          pending.fallbackPending = false;
+        }, 10);
 
         setTimeout(() => {
           removePending(pending229, pending);
