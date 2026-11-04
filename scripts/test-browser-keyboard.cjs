@@ -194,6 +194,36 @@ async function main() {
       window.__clearReceived();
       const textarea = window.__terminal.textarea;
       textarea.value = "";
+      textarea.dispatchEvent(new InputEvent("beforeinput",{
+        bubbles:true,
+        composed:true,
+        data:"b",
+        inputType:"insertText"
+      }));
+      textarea.value = "b";
+      textarea.setSelectionRange(1,1);
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyB"});
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyB"});
+    });
+    await page.waitForFunction(() => window.__received.join("") === "b");
+    assert.equal(await page.evaluate(() => window.__readPty()),"b");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "b";
+      textarea.value = "c";
+      textarea.setSelectionRange(1,1);
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyC"});
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyC"});
+    });
+    await page.waitForFunction(() => window.__received.join("") === "bc");
+    assert.equal(await page.evaluate(() => window.__readPty()),"c");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
       window.__dispatchKey("Process",{keyCode:229,code:"KeyN"});
       textarea.value = "n";
       textarea.setSelectionRange(1,1);
