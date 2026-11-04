@@ -142,6 +142,37 @@ async function main() {
     await page.evaluate(() => {
       window.__clearReceived();
       const textarea = window.__terminal.textarea;
+      textarea.value = "h";
+      textarea.setSelectionRange(1,1);
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyH"});
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyH"});
+    });
+    await page.waitForFunction(() => window.__received.join("") === "h");
+    assert.equal(await page.evaluate(() => window.__readPty()),"h");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
+      window.__dispatchKey("Enter",{keyCode:13,code:"Enter"});
+    });
+    assert.equal(await page.evaluate(() => window.__received.join("")),"\r");
+    assert.equal(await page.evaluate(() => window.__readPty()),"\n");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "h";
+      textarea.setSelectionRange(1,1);
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyH"});
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyH"});
+    });
+    await page.waitForFunction(() => window.__received.join("") === "h");
+    assert.equal(await page.evaluate(() => window.__readPty()),"h");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
       textarea.value = "";
       window.__dispatchKey("Process",{keyCode:229,code:"KeyM"});
       window.__dispatchInput("m",{value:"m",inputType:"insertText",composed:true});
