@@ -164,11 +164,12 @@
 
     let enabled = Boolean(options.enabled);
     let composing = false;
-    let pendingComposition = "";
-    let compositionTimer = 0;
-    let compositionStartValue = "";
-    let compositionPreview = "";
-    let passThroughKey = false;
+    let compositionCommitPending = false;
+    let compositionCommitData = "";
+    let compositionCommitTimer = 0;
+    const passThroughKeys = new Set();
+
+    const keyIdentity = event => event.code || event.key || String(event.keyCode);
 
     const positionTextarea = () => {
       if (!textarea.style || !terminal.element || !terminal.buffer) {
@@ -220,15 +221,14 @@
       }
     };
 
-    const flushPendingComposition = () => {
-      if (compositionTimer) {
-        clearTimeout(compositionTimer);
-        compositionTimer = 0;
-      }
+    const clearCompositionCommit = () => {
+      compositionCommitPending = false;
+      compositionCommitData = "";
 
-      const text = pendingComposition;
-      pendingComposition = "";
-      send(text);
+      if (compositionCommitTimer) {
+        clearTimeout(compositionCommitTimer);
+        compositionCommitTimer = 0;
+      }
     };
 
     const onKeyDown = event => {
@@ -236,20 +236,31 @@
         return;
       }
 
+      const identity = keyIdentity(event);
+
       if (composing || event.isComposing || event.keyCode === 229) {
-        passThroughKey = false;
-        stop(event);
+        if (!composing && event.keyCode === 229) {
+          clearCompositionCommit();
+        }
+
+        passThroughKeys.add(identity);
         return;
       }
+
+      clearCompositionCommit();
 
       const sequence = keySequence(event, terminal);
 
       if (sequence === PASSTHROUGH) {
-        passThroughKey = true;
+        passThroughKeys.add(identity);
         return;
       }
 
-      passThroughKey = false;
+      if (event.key === "Dead" || event.key === "AltGraph") {
+        passThroughKeys.add(identity);
+        return;
+      }
+
       stop(event);
 
       if (sequence !== null) {
@@ -264,18 +275,28 @@
         return;
       }
 
-      if (passThroughKey) {
-        passThroughKey = false;
+      passThroughKeys.delete(keyIdentity(event));
+
+      if (!composing && compositionCommitPending) {
+        clearCompositionCommit();
+      }
+    };
+
+    const onKeyPress = event => {
+      if (event.target !== textarea) {
+        return;
+      }
+
+      if (
+        composing ||
+        event.isComposing ||
+        event.keyCode === 229 ||
+        passThroughKeys.has(keyIdentity(event))
+      ) {
         return;
       }
 
       stop(event);
-    };
-
-    const onKeyPress = event => {
-      if (event.target === textarea && !passThroughKey) {
-        stop(event);
-      }
     };
 
     const onCompositionStart = event => {
@@ -283,26 +304,15 @@
         return;
       }
 
-      stop(event);
-      flushPendingComposition();
       composing = true;
-      compositionStartValue = textarea.value;
-      compositionPreview = "";
+      clearCompositionCommit();
       positionTextarea();
     };
 
     const onCompositionUpdate = event => {
-      if (event.target !== textarea) {
-        return;
+      if (event.target === textarea) {
+        positionTextarea();
       }
-
-      stop(event);
-
-      if (typeof event.data === "string") {
-        compositionPreview = event.data;
-      }
-
-      positionTextarea();
     };
 
     const onCompositionEnd = event => {
@@ -310,22 +320,24 @@
         return;
       }
 
-      stop(event);
       composing = false;
 
-      const textareaInput = textarea.value.slice(compositionStartValue.length);
-      const committed = typeof event.data === "string" && event.data.length > 0
-        ? event.data
-        : textareaInput || compositionPreview;
-
-      compositionStartValue = "";
-      compositionPreview = "";
-      clearTextarea();
+      const committed = typeof event.data === "string" ? event.data : "";
 
       if (committed) {
-        pendingComposition = committed;
-        compositionTimer = setTimeout(flushPendingComposition, 0);
+        compositionCommitPending = true;
+        compositionCommitData = committed;
+
+        if (compositionCommitTimer) {
+          clearTimeout(compositionCommitTimer);
+        }
+
+        compositionCommitTimer = setTimeout(clearCompositionCommit, 250);
+      } else {
+        clearCompositionCommit();
       }
+
+      positionTextarea();
     };
 
     const onInput = event => {
@@ -333,47 +345,45 @@
         return;
       }
 
-      stop(event);
+      const inputType = String(event.inputType || "").toLowerCase();
 
-      if (composing || event.isComposing) {
-        if (typeof event.data === "string" && event.data.length > 0) {
-          compositionPreview = event.data;
-        }
+      if (
+        composing ||
+        event.isComposing ||
+        inputType.includes("composition")
+      ) {
         return;
       }
 
-      const value = textarea.value;
-      const inputType = String(event.inputType || "").toLowerCase();
-      const data = typeof event.data === "string" && event.data.length > 0
-        ? event.data
-        : value;
+      if (compositionCommitPending) {
+        const value = textarea.value;
+        const data = typeof event.data === "string" && event.data.length > 0
+          ? event.data
+          : value;
 
-      if (pendingComposition) {
         if (
-          inputType.includes("composition") ||
-          data === pendingComposition ||
-          value === pendingComposition
+          inputType === "insertfromcomposition" ||
+          data === compositionCommitData ||
+          value === compositionCommitData
         ) {
-          const committed = data || value || pendingComposition;
-
-          if (compositionTimer) {
-            clearTimeout(compositionTimer);
-            compositionTimer = 0;
-          }
-
-          pendingComposition = "";
-          clearTextarea();
-          send(committed);
+          clearCompositionCommit();
           return;
         }
 
-        flushPendingComposition();
+        clearCompositionCommit();
       }
+
+      stop(event);
 
       if (inputType.startsWith("delete")) {
         clearTextarea();
         return;
       }
+
+      const value = textarea.value;
+      const data = typeof event.data === "string" && event.data.length > 0
+        ? event.data
+        : value;
 
       clearTextarea();
       send(data);
@@ -439,16 +449,8 @@
 
         if (!enabled) {
           composing = false;
-          compositionStartValue = "";
-          compositionPreview = "";
-          passThroughKey = false;
-
-          if (compositionTimer) {
-            clearTimeout(compositionTimer);
-            compositionTimer = 0;
-          }
-
-          pendingComposition = "";
+          clearCompositionCommit();
+          passThroughKeys.clear();
           clearTextarea();
         }
       },
@@ -467,12 +469,8 @@
         eventRoot.removeEventListener("input", onInput, true);
         eventRoot.removeEventListener("paste", onPaste, true);
 
-        if (compositionTimer) {
-          clearTimeout(compositionTimer);
-          compositionTimer = 0;
-        }
-
-        pendingComposition = "";
+        clearCompositionCommit();
+        passThroughKeys.clear();
 
         for (const disposable of disposables) {
           disposable.dispose();
