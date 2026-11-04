@@ -78,56 +78,10 @@
       return removed > 0 ? "\x7f".repeat(removed) : "";
     };
 
-    const onData = terminal.onData(() => {
-      dataVersion++;
-    });
-
-    const sendIfMissing = (data, pending, delayCompositionFlush) => {
-      if (!data) {
+    const clearPending229 = pending => {
+      if (!pending || pending !== pending229) {
         return;
       }
-
-      const versionBeforeInput = dataVersion;
-      const finish = () => {
-        if (dataVersion === versionBeforeInput) {
-          terminal.input(data, true);
-        }
-
-        if (pending && pending === pending229) {
-          pending.value = textarea.value;
-          pending.inputHandled = true;
-        }
-
-        lastTextareaValue = textarea.value;
-        beforeInputValue = textarea.value;
-      };
-
-      if (delayCompositionFlush) {
-        setTimeout(() => setTimeout(finish, 0), 0);
-      } else {
-        Promise.resolve().then(finish);
-      }
-    };
-
-    const flushPending229 = pending => {
-      if (!pending || pending !== pending229 || pending.inputHandled) {
-        return;
-      }
-
-      const data = getTextDelta(pending.value, textarea.value);
-
-      if (data) {
-        const versionBeforeInput = dataVersion;
-
-        if (pending.emittedData.length === 0 && dataVersion === versionBeforeInput) {
-          terminal.input(data, true);
-        }
-      }
-
-      pending.inputHandled = true;
-      pending.value = textarea.value;
-      lastTextareaValue = textarea.value;
-      beforeInputValue = textarea.value;
 
       if (pending.timer) {
         clearTimeout(pending.timer);
@@ -136,8 +90,47 @@
       pending229 = null;
     };
 
-    const schedulePending229Check = pending => {
-      if (!pending || pending !== pending229 || pending.inputHandled) {
+    const onData = terminal.onData(data => {
+      dataVersion++;
+
+      if (pending229) {
+        pending229.observedData += data;
+      }
+    });
+
+    const finishInputEvent = (data, pending, versionBeforeInput) => {
+      if (dataVersion === versionBeforeInput) {
+        terminal.input(data, true);
+      }
+
+      if (pending && pending === pending229) {
+        pending.value = textarea.value;
+        pending.observedData = "";
+        pending.inputHandled = true;
+        schedulePending229Cleanup(pending);
+      }
+
+      lastTextareaValue = textarea.value;
+      beforeInputValue = textarea.value;
+    };
+
+    const sendIfMissing = (data, pending) => {
+      if (!data) {
+        return;
+      }
+
+      const versionBeforeInput = dataVersion;
+      const finish = () => finishInputEvent(data, pending, versionBeforeInput);
+
+      if (compositionCommitPending) {
+        setTimeout(() => setTimeout(finish, 0), 0);
+      } else {
+        Promise.resolve().then(finish);
+      }
+    };
+
+    const schedulePending229Cleanup = pending => {
+      if (!pending || pending !== pending229) {
         return;
       }
 
@@ -146,8 +139,37 @@
       }
 
       pending.timer = setTimeout(() => {
-        flushPending229(pending);
+        flushPending229(pending, true);
       }, 35);
+    };
+
+    const flushPending229 = (pending, final = false) => {
+      if (!pending || pending !== pending229) {
+        return;
+      }
+
+      const data = getTextDelta(pending.value, textarea.value);
+
+      if (data) {
+        const alreadySent = pending.observedData.endsWith(data);
+
+        if (!alreadySent) {
+          terminal.input(data, true);
+        }
+
+        pending.value = textarea.value;
+        pending.observedData = "";
+        pending.inputHandled = true;
+      }
+
+      lastTextareaValue = textarea.value;
+      beforeInputValue = textarea.value;
+
+      if (final) {
+        clearPending229(pending);
+      } else {
+        schedulePending229Cleanup(pending);
+      }
     };
 
     const onCompositionStart = () => {
@@ -200,7 +222,12 @@
 
       const inputType = String(event.inputType || "").toLowerCase();
 
-      if (composing || event.isComposing || inputType === "insertcompositiontext" || inputType === "deletecompositiontext") {
+      if (
+        composing ||
+        event.isComposing ||
+        inputType === "insertcompositiontext" ||
+        inputType === "deletecompositiontext"
+      ) {
         lastTextareaValue = textarea.value;
         beforeInputValue = textarea.value;
         return;
@@ -219,12 +246,10 @@
 
       if (inputType.startsWith("delete")) {
         data = valueDelta || "\x7f";
-      } else if (pending && valueDelta) {
+      } else if (valueDelta) {
         data = valueDelta;
       } else if (typeof event.data === "string" && event.data.length > 0) {
         data = event.data;
-      } else {
-        data = valueDelta;
       }
 
       beforeInputValue = currentValue;
@@ -234,41 +259,28 @@
         return;
       }
 
-      const delayCompositionFlush =
-        compositionCommitPending && inputType.includes("composition");
-
       if (pending) {
         pending.value = currentValue;
-        pending.inputHandled = false;
+
+        if (pending.observedData.endsWith(data)) {
+          pending.observedData = "";
+          pending.inputHandled = true;
+          schedulePending229Cleanup(pending);
+          return;
+        }
       }
 
-      sendIfMissing(data, pending, delayCompositionFlush);
+      sendIfMissing(data, pending);
     };
 
     const customKeyEventHandler = event => {
-      if (event.type === "keyup" && pending229) {
-        setTimeout(() => {
-          if (pending229 && !pending229.inputHandled) {
-            const pending = pending229;
-            const data = getTextDelta(pending.value, textarea.value);
-
-            if (data) {
-              const versionBeforeInput = dataVersion;
-
-              if (
-                pending.emittedData.length === 0 &&
-                dataVersion === versionBeforeInput
-              ) {
-                terminal.input(data, true);
-              }
-
-              pending.inputHandled = true;
-              pending.value = textarea.value;
-              lastTextareaValue = textarea.value;
-              beforeInputValue = textarea.value;
-            }
-          }
-        }, 0);
+      if (
+        event.type === "keyup" &&
+        pending229 &&
+        !pending229.inputHandled
+      ) {
+        const pending = pending229;
+        setTimeout(() => flushPending229(pending), 0);
       }
 
       if (
@@ -276,18 +288,18 @@
         event.keyCode === 229 &&
         !composing
       ) {
-        if (pending229) {
-          schedulePending229Check(pending229);
-        } else {
+        if (!pending229) {
           pending229 = {
             value:textarea.value,
-            emittedData:"",
+            observedData:"",
             inputHandled:false,
             timer:0
           };
-          schedulePending229Check(pending229);
+        } else {
+          flushPending229(pending229);
         }
 
+        schedulePending229Cleanup(pending229);
         return false;
       }
 
