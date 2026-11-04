@@ -161,12 +161,19 @@ async function main() {
       window.__dispatchKey("Process",{keyCode:229,code:"KeyH"});
       window.__dispatchInput("h",{value:"h",inputType:"insertText",composed:true});
       window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyH"});
+    });
+    await page.waitForFunction(() => window.__received.join("") === "h");
+    assert.equal(await page.evaluate(() => window.__readPty()),"h");
+
+    await page.evaluate(() => {
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
       window.__dispatchKey("Process",{keyCode:229,code:"KeyI"});
-      window.__dispatchInput("i",{value:"hi",inputType:"insertText",composed:true});
+      window.__dispatchInput("i",{value:"i",inputType:"insertText",composed:true});
       window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyI"});
     });
     await page.waitForFunction(() => window.__received.join("") === "hi");
-    assert.equal(await page.evaluate(() => window.__readPty()),"hi");
+    assert.equal(await page.evaluate(() => window.__readPty()),"i");
 
     await page.evaluate(() => {
       window.__clearReceived();
