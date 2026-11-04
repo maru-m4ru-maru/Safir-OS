@@ -78,22 +78,43 @@
       }, 120);
     });
 
+    let compositionPreview = "";
+
     const onCompositionStart = () => {
       composing = true;
+      compositionPreview = "";
       clearCompositionCommit();
       beforeInputValue = null;
       lastTextareaValue = textarea.value;
     };
 
-    const onCompositionEnd = () => {
+    const onCompositionUpdate = event => {
+      if (typeof event.data === "string") {
+        compositionPreview = event.data;
+      }
+    };
+
+    const onCompositionEnd = event => {
       composing = false;
+
+      const committed = typeof event.data === "string" && event.data.length > 0
+        ? event.data
+        : compositionPreview;
+
+      if (!committed) {
+        clearCompositionCommit();
+        return;
+      }
+
       compositionCommitPending = true;
 
       if (compositionCommitTimer) {
         clearTimeout(compositionCommitTimer);
       }
 
-      compositionCommitTimer = setTimeout(clearCompositionCommit, 120);
+      compositionCommitTimer = setTimeout(() => {
+        compositionCommitTimer = setTimeout(clearCompositionCommit, 0);
+      }, 0);
     };
 
     const onBeforeInput = event => {
@@ -247,6 +268,7 @@
     terminal.attachCustomKeyEventHandler(customKeyEventHandler);
 
     eventRoot.addEventListener("compositionstart", onCompositionStart, true);
+    eventRoot.addEventListener("compositionupdate", onCompositionUpdate, true);
     eventRoot.addEventListener("compositionend", onCompositionEnd, true);
     eventRoot.addEventListener("beforeinput", onBeforeInput, true);
     eventRoot.addEventListener("input", onInput, true);
@@ -254,6 +276,7 @@
     return {
       dispose() {
         eventRoot.removeEventListener("compositionstart", onCompositionStart, true);
+        eventRoot.removeEventListener("compositionupdate", onCompositionUpdate, true);
         eventRoot.removeEventListener("compositionend", onCompositionEnd, true);
         eventRoot.removeEventListener("beforeinput", onBeforeInput, true);
         eventRoot.removeEventListener("input", onInput, true);
