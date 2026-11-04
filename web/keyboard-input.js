@@ -171,7 +171,11 @@
 
     const keyIdentity = event => event.code || event.key || String(event.keyCode);
 
-    const positionTextarea = () => {
+    let positionFrame = null;
+
+    const updateTextareaPosition = () => {
+      positionFrame = null;
+
       if (!textarea.style || !terminal.element || !terminal.buffer) {
         return;
       }
@@ -199,6 +203,30 @@
       textarea.style.width = Math.max(1, cellWidth) + "px";
       textarea.style.height = Math.max(1, cellHeight) + "px";
       textarea.style.lineHeight = Math.max(1, cellHeight) + "px";
+    };
+
+    const scheduleTextareaPosition = () => {
+      if (positionFrame !== null) {
+        return;
+      }
+
+      if (typeof requestAnimationFrame !== "function") {
+        updateTextareaPosition();
+        return;
+      }
+
+      positionFrame = requestAnimationFrame(updateTextareaPosition);
+    };
+
+    const cancelTextareaPosition = () => {
+      if (
+        positionFrame !== null &&
+        typeof cancelAnimationFrame === "function"
+      ) {
+        cancelAnimationFrame(positionFrame);
+      }
+
+      positionFrame = null;
     };
 
     const send = data => {
@@ -306,12 +334,12 @@
 
       composing = true;
       clearCompositionCommit();
-      positionTextarea();
+      scheduleTextareaPosition();
     };
 
     const onCompositionUpdate = event => {
       if (event.target === textarea) {
-        positionTextarea();
+        scheduleTextareaPosition();
       }
     };
 
@@ -337,7 +365,7 @@
         clearCompositionCommit();
       }
 
-      positionTextarea();
+      scheduleTextareaPosition();
     };
 
     const onInput = event => {
@@ -413,16 +441,13 @@
     const disposables = [];
 
     if (typeof terminal.onCursorMove === "function") {
-      disposables.push(terminal.onCursorMove(positionTextarea));
+      disposables.push(terminal.onCursorMove(scheduleTextareaPosition));
     }
 
     if (typeof terminal.onResize === "function") {
-      disposables.push(terminal.onResize(positionTextarea));
+      disposables.push(terminal.onResize(scheduleTextareaPosition));
     }
 
-    if (typeof terminal.onRender === "function") {
-      disposables.push(terminal.onRender(positionTextarea));
-    }
 
     eventRoot.addEventListener("keydown", onKeyDown, true);
     eventRoot.addEventListener("keyup", onKeyUp, true);
@@ -434,6 +459,7 @@
     eventRoot.addEventListener("paste", onPaste, true);
 
     clearTextarea();
+    scheduleTextareaPosition();
 
     return {
       focus() {
@@ -451,6 +477,7 @@
           composing = false;
           clearCompositionCommit();
           passThroughKeys.clear();
+          cancelTextareaPosition();
           clearTextarea();
         }
       },
@@ -471,6 +498,7 @@
 
         clearCompositionCommit();
         passThroughKeys.clear();
+        cancelTextareaPosition();
 
         for (const disposable of disposables) {
           disposable.dispose();

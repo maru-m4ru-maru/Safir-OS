@@ -45,6 +45,12 @@ const html = [
   "    window.__terminal.loadAddon(pty.master);",
   "    window.__terminal.onData(data => window.__received.push(data));",
   "    window.__readPty = () => new TextDecoder().decode(Uint8Array.from(window.__pty.read()));",
+  "    window.__renderSubscriptions = 0;",
+  "    const originalOnRender = window.__terminal.onRender.bind(window.__terminal);",
+  "    window.__terminal.onRender = callback => {",
+  "      window.__renderSubscriptions++;",
+  "      return originalOnRender(callback);",
+  "    };",
   '    window.__keyboard = SafirOSKeyboardInput.install(window.__terminal,{enabled:true});',
   "    window.__targetKeyEvents = 0;",
   "    window.__targetInputEvents = 0;",
@@ -122,6 +128,12 @@ async function main() {
 
     const textarea = page.locator(".xterm-helper-textarea");
     await textarea.focus();
+
+    assert.equal(
+      await page.evaluate(() => window.__renderSubscriptions),
+      0,
+      "Keyboard input must not measure textarea layout on every xterm render"
+    );
 
     let expected = "";
     for (const character of "help") {
