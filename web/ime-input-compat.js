@@ -142,7 +142,22 @@
 
       const versionBeforeInput = dataVersion;
       const inputData = event.data;
-      const pending229Entry = pending229.shift();
+      const pending229Index = pending229.findIndex(
+        pending => pending.key === inputData
+      );
+      const previousValueIndex = pending229.findIndex(
+        pending => pending.value === lastTextareaValue
+      );
+      const selected229Index = pending229Index !== -1
+        ? pending229Index
+        : previousValueIndex !== -1
+          ? previousValueIndex
+          : pending229.length > 0
+            ? 0
+            : -1;
+      const pending229Entry = selected229Index !== -1
+        ? pending229.splice(selected229Index, 1)[0]
+        : null;
       const previousValue = pending229Entry
         ? pending229Entry.value
         : beforeInputValue !== null
@@ -178,6 +193,20 @@
     };
 
     const customKeyEventHandler = event => {
+      if (event.type === "keyup") {
+        const index = pending229.findIndex(
+          pending =>
+            (pending.code && pending.code === event.code) ||
+            (pending.key && pending.key === event.key)
+        );
+
+        if (index !== -1) {
+          pending229.splice(index, 1);
+        }
+
+        return true;
+      }
+
       if (
         event.type === "keydown" &&
         event.keyCode === 229 &&
@@ -186,6 +215,7 @@
       ) {
         const pending = {
           key:event.key,
+          code:event.code,
           value:textarea.value
         };
 
