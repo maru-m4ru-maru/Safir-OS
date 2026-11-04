@@ -179,6 +179,34 @@ async function main() {
       window.__clearReceived();
       const textarea = window.__terminal.textarea;
       textarea.value = "";
+      window.__dispatchInput("j",{value:"j",inputType:"insertText",composed:true});
+      window.__dispatchKey("j",{keyCode:229,code:"KeyJ"});
+    });
+    await page.waitForFunction(() => window.__received.join("") === "j");
+    await page.waitForTimeout(30);
+
+    await page.evaluate(() => {
+      const textarea = window.__terminal.textarea;
+      window.__dispatchInput("k",{value:"jk",inputType:"insertText",composed:true});
+      window.__dispatchKey("k",{keyCode:229,code:"KeyK"});
+    });
+    await page.waitForTimeout(30);
+    assert.equal(
+      await page.evaluate(() => window.__received.join("")),
+      "jk",
+      "Rapid input-before-keydown rollover must not drop the next character"
+    );
+    assert.equal(await page.evaluate(() => window.__readPty()),"jk");
+
+    await page.evaluate(() => {
+      window.__dispatchKeyUp("j",{keyCode:74,code:"KeyJ"});
+      window.__dispatchKeyUp("k",{keyCode:75,code:"KeyK"});
+    });
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
       window.__dispatchComposition("compositionstart");
       window.__dispatchComposition("compositionupdate","に");
       window.__dispatchInput("に",{value:"に",inputType:"insertCompositionText",isComposing:true});
