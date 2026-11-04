@@ -248,7 +248,7 @@ async function main() {
       window.__dispatchKey("Process",{keyCode:229,code:"KeyC"});
       window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyC"});
     });
-    await page.waitForFunction(() => window.__received.join("") === "bc");
+    await page.waitForFunction(() => window.__received.join("") === "c");
     assert.equal(await page.evaluate(() => window.__readPty()),"c");
 
     await page.evaluate(() => {
