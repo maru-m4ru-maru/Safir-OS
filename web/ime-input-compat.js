@@ -78,6 +78,11 @@
       return removed > 0 ? "\x7f".repeat(removed) : "";
     };
 
+    const getInsertedTextDelta = (before, after) => {
+      const delta = getTextDelta(before, after);
+      return delta === "\x7f" || /^\x7f+$/.test(delta) ? "" : delta;
+    };
+
     const clearPending229 = pending => {
       if (!pending || pending !== pending229) {
         return;
@@ -148,7 +153,7 @@
         return;
       }
 
-      const data = getTextDelta(pending.value, textarea.value);
+      const data = getInsertedTextDelta(pending.value, textarea.value);
 
       if (data) {
         const alreadySent = pending.observedData.endsWith(data);
@@ -173,6 +178,10 @@
     };
 
     const onCompositionStart = () => {
+      if (pending229) {
+        flushPending229(pending229, true);
+      }
+
       composing = true;
       compositionPreview = "";
       clearCompositionCommit();
@@ -240,7 +249,9 @@
           ? beforeInputValue
           : lastTextareaValue;
       const currentValue = textarea.value;
-      const valueDelta = getTextDelta(previousValue, currentValue);
+      const valueDelta = pending
+        ? getInsertedTextDelta(previousValue, currentValue)
+        : getTextDelta(previousValue, currentValue);
 
       let data = "";
 
@@ -273,7 +284,21 @@
       sendIfMissing(data, pending);
     };
 
+    const onBlur = () => {
+      if (pending229) {
+        flushPending229(pending229, true);
+      }
+    };
+
     const customKeyEventHandler = event => {
+      if (
+        event.type === "keydown" &&
+        event.keyCode !== 229 &&
+        pending229
+      ) {
+        flushPending229(pending229, true);
+      }
+
       if (
         event.type === "keyup" &&
         pending229 &&
@@ -313,6 +338,7 @@
     eventRoot.addEventListener("compositionend", onCompositionEnd, true);
     eventRoot.addEventListener("beforeinput", onBeforeInput, true);
     eventRoot.addEventListener("input", onInput, true);
+    eventRoot.addEventListener("blur", onBlur, true);
 
     return {
       dispose() {
@@ -321,6 +347,7 @@
         eventRoot.removeEventListener("compositionend", onCompositionEnd, true);
         eventRoot.removeEventListener("beforeinput", onBeforeInput, true);
         eventRoot.removeEventListener("input", onInput, true);
+        eventRoot.removeEventListener("blur", onBlur, true);
 
         clearCompositionCommit();
 
