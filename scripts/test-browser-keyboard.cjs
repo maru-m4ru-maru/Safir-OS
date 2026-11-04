@@ -234,7 +234,7 @@ async function main() {
       };
       window.__dispatchComposition("compositionend","日本語");
     });
-    await page.waitForTimeout(20);
+    await page.waitForTimeout(5);
     assert.deepEqual(
       await page.evaluate(() => window.__compositionPreview),
       {active:true,text:"日本語"}
@@ -245,6 +245,22 @@ async function main() {
       await page.evaluate(() => window.__nativeCompositionEvents),
       {start:1,update:2,end:1,input:2}
     );
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyA"});
+      window.__dispatchInput("a",{value:"a",inputType:"insertText",composed:true});
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyA"});
+    });
+    await page.waitForTimeout(10);
+    assert.equal(
+      await page.evaluate(() => window.__received.join("")),
+      "a",
+      "The first character after an IME commit must not be suppressed"
+    );
+    assert.equal(await page.evaluate(() => window.__readPty()),"a");
 
     await page.evaluate(() => {
       window.__clearReceived();
