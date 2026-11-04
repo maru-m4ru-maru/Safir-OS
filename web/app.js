@@ -59,6 +59,10 @@ const terminal=new Terminal({
 
 terminal.open(terminalMount);
 
+const inputCompatibility=window.SafirOSInputCompatibility
+  ?window.SafirOSInputCompatibility.install(terminal)
+  :null;
+
 const originalTerminalWrite=terminal.write.bind(terminal);
 terminal.write=function(data,onWrite){
   const output=typeof data==="string"
