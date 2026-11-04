@@ -194,6 +194,40 @@ async function main() {
       window.__clearReceived();
       const textarea = window.__terminal.textarea;
       textarea.value = "";
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyN"});
+      textarea.value = "n";
+      textarea.setSelectionRange(1,1);
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyN"});
+    });
+    await page.waitForFunction(() => window.__received.join("") === "n");
+    assert.equal(await page.evaluate(() => window.__readPty()),"n");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyT"});
+      textarea.value = "t";
+      textarea.setSelectionRange(1,1);
+    });
+    await page.waitForFunction(() => window.__received.join("") === "t");
+    assert.equal(await page.evaluate(() => window.__readPty()),"t");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyF"});
+      window.__dispatchInput("f",{value:"f",inputType:"insertFromComposition",composed:true});
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyF"});
+    });
+    await page.waitForFunction(() => window.__received.join("") === "f");
+    assert.equal(await page.evaluate(() => window.__readPty()),"f");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
       window.__dispatchInput("j",{value:"j",inputType:"insertText",composed:true});
       window.__dispatchKey("j",{keyCode:229,code:"KeyJ"});
     });
