@@ -13,7 +13,8 @@ const xtermDirectory = path.join(modulesDirectory, "@xterm/xterm");
 const assets = {
   "/xterm.js": path.join(xtermDirectory, "lib/xterm.js"),
   "/xterm.css": path.join(xtermDirectory, "css/xterm.css"),
-  "/xterm-pty.js": path.join(__dirname, "../web/qemu/xterm-pty.js")
+  "/xterm-pty.js": path.join(__dirname, "../web/qemu/xterm-pty.js"),
+  "/ime-input-compat.js": path.join(__dirname, "../web/ime-input-compat.js")
 };
 
 const html = [
@@ -26,6 +27,7 @@ const html = [
   "  <style>html,body{margin:0;background:#000}#terminal{width:800px;height:320px}</style>",
   '  <script src="/xterm.js"></script>',
   '  <script src="/xterm-pty.js"></script>',
+  '  <script src="/ime-input-compat.js"></script>',
   "</head>",
   "<body>",
   '  <div id="terminal"></div>',
@@ -33,6 +35,7 @@ const html = [
   "    window.__received = [];",
   '    window.__terminal = new Terminal({cols:80,rows:24});',
   '    window.__terminal.open(document.getElementById("terminal"));',
+  "    window.__inputCompatibility = SafirOSInputCompatibility.install(window.__terminal);",
   "    const pty = openpty();",
   '    const termios = pty.slave.ioctl("TCGETS");',
   "    termios.iflag |= 0x0100;",
