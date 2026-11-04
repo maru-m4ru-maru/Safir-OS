@@ -142,6 +142,37 @@ async function main() {
     await page.evaluate(() => {
       window.__clearReceived();
       const textarea = window.__terminal.textarea;
+      textarea.value = "h";
+      textarea.setSelectionRange(1,1);
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyH"});
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyH"});
+    });
+    await page.waitForFunction(() => window.__received.join("") === "h");
+    assert.equal(await page.evaluate(() => window.__readPty()),"h");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
+      window.__dispatchKey("Enter",{keyCode:13,code:"Enter"});
+    });
+    assert.equal(await page.evaluate(() => window.__received.join("")),"\r");
+    assert.equal(await page.evaluate(() => window.__readPty()),"\n");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "h";
+      textarea.setSelectionRange(1,1);
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyH"});
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyH"});
+    });
+    await page.waitForFunction(() => window.__received.join("") === "h");
+    assert.equal(await page.evaluate(() => window.__readPty()),"h");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
       textarea.value = "";
       window.__dispatchKey("Process",{keyCode:229,code:"KeyM"});
       window.__dispatchInput("m",{value:"m",inputType:"insertText",composed:true});
@@ -189,6 +220,70 @@ async function main() {
     });
     await page.waitForFunction(() => window.__received.join("") === "hi");
     assert.equal(await page.evaluate(() => window.__readPty()),"i");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
+      textarea.dispatchEvent(new InputEvent("beforeinput",{
+        bubbles:true,
+        composed:true,
+        data:"b",
+        inputType:"insertText"
+      }));
+      textarea.value = "b";
+      textarea.setSelectionRange(1,1);
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyB"});
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyB"});
+    });
+    await page.waitForFunction(() => window.__received.join("") === "b");
+    assert.equal(await page.evaluate(() => window.__readPty()),"b");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "b";
+      textarea.value = "c";
+      textarea.setSelectionRange(1,1);
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyC"});
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyC"});
+    });
+    await page.waitForFunction(() => window.__received.join("") === "c");
+    assert.equal(await page.evaluate(() => window.__readPty()),"c");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyN"});
+      textarea.value = "n";
+      textarea.setSelectionRange(1,1);
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyN"});
+    });
+    await page.waitForFunction(() => window.__received.join("") === "n");
+    assert.equal(await page.evaluate(() => window.__readPty()),"n");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyT"});
+      textarea.value = "t";
+      textarea.setSelectionRange(1,1);
+    });
+    await page.waitForFunction(() => window.__received.join("") === "t");
+    assert.equal(await page.evaluate(() => window.__readPty()),"t");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyF"});
+      window.__dispatchInput("f",{value:"f",inputType:"insertFromComposition",composed:true});
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyF"});
+    });
+    await page.waitForFunction(() => window.__received.join("") === "f");
+    assert.equal(await page.evaluate(() => window.__readPty()),"f");
 
     await page.evaluate(() => {
       window.__clearReceived();
