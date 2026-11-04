@@ -313,16 +313,20 @@
         event.keyCode === 229 &&
         !composing
       ) {
-        if (!pending229) {
-          pending229 = {
-            value:textarea.value,
-            observedData:"",
-            inputHandled:false,
-            timer:0
-          };
-        } else {
-          flushPending229(pending229);
+        if (pending229) {
+          flushPending229(pending229, true);
         }
+
+        const baseline = beforeInputValue !== null
+          ? beforeInputValue
+          : lastTextareaValue;
+
+        pending229 = {
+          value:baseline,
+          observedData:"",
+          inputHandled:false,
+          timer:0
+        };
 
         schedulePending229Cleanup(pending229);
         return false;
