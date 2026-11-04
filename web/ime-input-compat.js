@@ -101,6 +101,11 @@
       if (pending229) {
         pending229.observedData += data;
       }
+
+      if (data.includes("\r") || data.includes("\x03")) {
+        lastTextareaValue = textarea.value;
+        beforeInputValue = textarea.value;
+      }
     });
 
     const finishInputEvent = (data, pending, versionBeforeInput) => {
@@ -288,6 +293,11 @@
       if (pending229) {
         flushPending229(pending229, true);
       }
+
+      setTimeout(() => {
+        lastTextareaValue = textarea.value;
+        beforeInputValue = textarea.value;
+      }, 0);
     };
 
     const customKeyEventHandler = event => {
