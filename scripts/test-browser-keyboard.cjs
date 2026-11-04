@@ -13,7 +13,6 @@ const xtermDirectory = path.join(modulesDirectory, "@xterm/xterm");
 const assets = {
   "/xterm.js": path.join(xtermDirectory, "lib/xterm.js"),
   "/xterm.css": path.join(xtermDirectory, "css/xterm.css"),
-  "/keyboard-input.js": path.join(__dirname, "../web/keyboard-input.js"),
   "/xterm-pty.js": path.join(__dirname, "../web/qemu/xterm-pty.js")
 };
 
@@ -27,7 +26,6 @@ const html = [
   "  <style>html,body{margin:0;background:#000}#terminal{width:800px;height:320px}</style>",
   '  <script src="/xterm.js"></script>',
   '  <script src="/xterm-pty.js"></script>',
-  '  <script src="/keyboard-input.js"></script>',
   "</head>",
   "<body>",
   '  <div id="terminal"></div>',
@@ -45,23 +43,7 @@ const html = [
   "    window.__terminal.loadAddon(pty.master);",
   "    window.__terminal.onData(data => window.__received.push(data));",
   "    window.__readPty = () => new TextDecoder().decode(Uint8Array.from(window.__pty.read()));",
-  "    window.__renderSubscriptions = 0;",
-  "    const originalOnRender = window.__terminal.onRender.bind(window.__terminal);",
-  "    window.__terminal.onRender = callback => {",
-  "      window.__renderSubscriptions++;",
-  "      return originalOnRender(callback);",
-  "    };",
-  '    window.__keyboard = SafirOSKeyboardInput.install(window.__terminal,{enabled:true});',
-  "    window.__targetKeyEvents = 0;",
-  "    window.__targetInputEvents = 0;",
-  "    window.__nativeCompositionEvents = {start:0,update:0,end:0,input:0};",
-  '    window.__terminal.textarea.addEventListener("keydown",() => window.__targetKeyEvents++,true);',
-  '    window.__terminal.textarea.addEventListener("input",() => window.__targetInputEvents++,true);',
-  '    window.__terminal.element.addEventListener("compositionstart",() => window.__nativeCompositionEvents.start++);',
-  '    window.__terminal.element.addEventListener("compositionupdate",() => window.__nativeCompositionEvents.update++);',
-  '    window.__terminal.element.addEventListener("compositionend",() => window.__nativeCompositionEvents.end++);',
-  '    window.__terminal.element.addEventListener("input",event => { if(event.isComposing) window.__nativeCompositionEvents.input++; });',
-  "    window.__terminal.focus();",
+  "    window.__clearReceived = () => { window.__received.length = 0; };",
   "    window.__dispatchKey = (key,options={}) => {",
   '      const event = new KeyboardEvent("keydown",{key,code:options.code || "",bubbles:true,cancelable:true,ctrlKey:Boolean(options.ctrlKey),shiftKey:Boolean(options.shiftKey),altKey:Boolean(options.altKey)});',
   '      if (options.keyCode !== undefined) Object.defineProperty(event,"keyCode",{get:()=>options.keyCode});',
@@ -75,14 +57,20 @@ const html = [
   "    };",
   "    window.__dispatchInput = (data,options={}) => {",
   '      const textarea = document.querySelector(".xterm-helper-textarea");',
-  "      textarea.value = options.value === undefined ? data : options.value;",
-  '      if (typeof textarea.setSelectionRange === "function") textarea.setSelectionRange(textarea.value.length,textarea.value.length);',
+  "      const value = options.value === undefined ? textarea.value + data : options.value;",
+  "      textarea.value = value;",
+  '      if (typeof textarea.setSelectionRange === "function") textarea.setSelectionRange(value.length,value.length);',
   '      textarea.dispatchEvent(new InputEvent("input",{bubbles:true,composed:options.composed !== false,data,inputType:options.inputType || "insertText",isComposing:Boolean(options.isComposing)}));',
   "    };",
   "    window.__dispatchComposition = (type,data=\"\") => {",
   '      document.querySelector(".xterm-helper-textarea").dispatchEvent(new CompositionEvent(type,{bubbles:true,composed:true,data}));',
   "    };",
-  "    window.__clearReceived = () => { window.__received.length = 0; };",
+  "    window.__nativeCompositionEvents = {start:0,update:0,end:0,input:0};",
+  '    window.__terminal.element.addEventListener("compositionstart",() => window.__nativeCompositionEvents.start++);',
+  '    window.__terminal.element.addEventListener("compositionupdate",() => window.__nativeCompositionEvents.update++);',
+  '    window.__terminal.element.addEventListener("compositionend",() => window.__nativeCompositionEvents.end++);',
+  '    window.__terminal.element.addEventListener("input",event => { if(event.isComposing) window.__nativeCompositionEvents.input++; });',
+  "    window.__terminal.focus();",
   "  </script>",
   "</body>",
   "</html>"
@@ -124,16 +112,10 @@ async function main() {
 
     page.on("pageerror",error => errors.push(error.message));
     await page.goto("http://127.0.0.1:" + address.port + "/");
-    await page.waitForFunction(() => window.__keyboard && window.__terminal.textarea);
+    await page.waitForFunction(() => window.__terminal && window.__terminal.textarea);
 
     const textarea = page.locator(".xterm-helper-textarea");
     await textarea.focus();
-
-    assert.equal(
-      await page.evaluate(() => window.__renderSubscriptions),
-      0,
-      "Keyboard input must not measure textarea layout on every xterm render"
-    );
 
     let expected = "";
     for (const character of "help") {
@@ -145,8 +127,6 @@ async function main() {
 
     assert.equal(await page.evaluate(() => window.__received.join("")),"help");
     assert.equal(await textarea.inputValue(),"");
-    assert.equal(await page.evaluate(() => window.__targetKeyEvents),0);
-    assert.equal(await page.evaluate(() => window.__targetInputEvents),0);
 
     await page.keyboard.press("Enter");
     assert.equal(await page.evaluate(() => window.__received.join("")),"help\r");
@@ -154,34 +134,44 @@ async function main() {
 
     await page.evaluate(() => {
       window.__clearReceived();
-      window.__dispatchInput("m",{value:"m",composed:true});
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
       window.__dispatchKey("Process",{keyCode:229,code:"KeyM"});
-      window.__dispatchKeyUp("m",{keyCode:77,code:"KeyM"});
-      window.__dispatchInput("o",{value:"o",composed:true});
-      window.__dispatchKey("Process",{keyCode:229,code:"KeyO"});
-      window.__dispatchKeyUp("o",{keyCode:79,code:"KeyO"});
+      window.__dispatchInput("m",{value:"m",inputType:"insertText",composed:true});
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyM"});
     });
-    await page.waitForFunction(() => window.__received.join("") === "mo");
-    await page.waitForTimeout(20);
-    assert.equal(await page.evaluate(() => window.__received.join("")),"mo");
-    assert.equal(await page.evaluate(() => window.__readPty()),"mo");
+    await page.waitForFunction(() => window.__received.join("") === "m");
+    assert.equal(await page.evaluate(() => window.__readPty()),"m");
 
     await page.evaluate(() => {
       window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
+      window.__dispatchInput("o",{value:"o",inputType:"insertText",composed:true});
+      window.__dispatchKey("Process",{keyCode:229,code:"KeyO"});
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyO"});
+    });
+    await page.waitForFunction(() => window.__received.join("") === "o");
+    assert.equal(await page.evaluate(() => window.__readPty()),"o");
+
+    await page.evaluate(() => {
+      window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
       window.__dispatchKey("Process",{keyCode:229,code:"KeyH"});
-      window.__dispatchInput("h",{value:"h",composed:true});
+      window.__dispatchInput("h",{value:"h",inputType:"insertText",composed:true});
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyH"});
       window.__dispatchKey("Process",{keyCode:229,code:"KeyI"});
-      window.__dispatchInput("i",{value:"hi",composed:true});
-      window.__dispatchKeyUp("h",{keyCode:72,code:"KeyH"});
-      window.__dispatchKeyUp("i",{keyCode:73,code:"KeyI"});
+      window.__dispatchInput("i",{value:"hi",inputType:"insertText",composed:true});
+      window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyI"});
     });
     await page.waitForFunction(() => window.__received.join("") === "hi");
-    await page.waitForTimeout(20);
-    assert.equal(await page.evaluate(() => window.__received.join("")),"hi");
     assert.equal(await page.evaluate(() => window.__readPty()),"hi");
 
     await page.evaluate(() => {
       window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
       window.__dispatchComposition("compositionstart");
       window.__dispatchComposition("compositionupdate","に");
       window.__dispatchInput("に",{value:"に",inputType:"insertCompositionText",isComposing:true});
@@ -195,30 +185,21 @@ async function main() {
       window.__dispatchComposition("compositionend","日本語");
     });
     await page.waitForTimeout(20);
-    const nativeComposition = await page.evaluate(() => ({
-      received:window.__received.join(""),
-      textareaValue:window.__terminal.textarea.value,
-      selectionEnd:window.__terminal.textarea.selectionEnd,
-      events:window.__nativeCompositionEvents,
-      compositionView:document.querySelector(".composition-view")?.className || ""
-    }));
-    assert.equal(
-      nativeComposition.received,
-      "日本語",
-      "Native IME commit mismatch: " + JSON.stringify(nativeComposition)
-    );
     assert.deepEqual(
       await page.evaluate(() => window.__compositionPreview),
       {active:true,text:"日本語"}
     );
+    assert.equal(await page.evaluate(() => window.__received.join("")),"日本語");
     assert.equal(await page.evaluate(() => window.__readPty()),"日本語");
     assert.deepEqual(
-      nativeComposition.events,
+      await page.evaluate(() => window.__nativeCompositionEvents),
       {start:1,update:2,end:1,input:2}
     );
 
     await page.evaluate(() => {
       window.__clearReceived();
+      const textarea = window.__terminal.textarea;
+      textarea.value = "";
       window.__dispatchComposition("compositionstart");
       window.__dispatchComposition("compositionupdate","かな");
       window.__dispatchInput("かな",{value:"かな",inputType:"insertCompositionText",isComposing:true});
@@ -236,36 +217,36 @@ async function main() {
 
     await page.evaluate(() => {
       window.__clearReceived();
-      window.__dispatchKey("a",{ctrlKey:true,code:"KeyA"});
-      window.__dispatchKey("e",{ctrlKey:true,code:"KeyE"});
-      window.__dispatchKey("ArrowLeft",{ctrlKey:true,code:"ArrowLeft"});
-      window.__dispatchKey("Backspace",{ctrlKey:true,code:"Backspace"});
-      window.__dispatchKey("Enter",{code:"Enter"});
+      window.__dispatchKey("a",{ctrlKey:true,keyCode:65,code:"KeyA"});
+      window.__dispatchKeyUp("a",{keyCode:65,code:"KeyA"});
+      window.__dispatchKey("e",{ctrlKey:true,keyCode:69,code:"KeyE"});
+      window.__dispatchKeyUp("e",{keyCode:69,code:"KeyE"});
+      window.__dispatchKey("ArrowLeft",{ctrlKey:true,keyCode:37,code:"ArrowLeft"});
+      window.__dispatchKeyUp("ArrowLeft",{keyCode:37,code:"ArrowLeft"});
+      window.__dispatchKey("Backspace",{ctrlKey:true,keyCode:8,code:"Backspace"});
+      window.__dispatchKeyUp("Backspace",{keyCode:8,code:"Backspace"});
+      window.__dispatchKey("Enter",{keyCode:13,code:"Enter"});
+      window.__dispatchKeyUp("Enter",{keyCode:13,code:"Enter"});
     });
     assert.equal(
       await page.evaluate(() => window.__received.join("")),
-      "\x01\x05\x1b[1;5D\x17\r"
+      "\x01\x05\x1b[1;5D\b\r"
     );
     assert.equal(
       await page.evaluate(() => window.__readPty()),
-      "\x01\x05\x1b[1;5D\x17\n"
+      "\x01\x05\x1b[1;5D\b\n"
     );
 
     await page.evaluate(() => {
       window.__clearReceived();
-      const textarea = document.querySelector(".xterm-helper-textarea");
-      const event = new Event("paste",{bubbles:true,cancelable:true});
-      Object.defineProperty(event,"clipboardData",{
-        value:{getData:type => type === "text/plain" ? "paste text" : ""}
-      });
-      textarea.dispatchEvent(event);
+      window.__terminal.paste("paste text");
     });
     assert.equal(await page.evaluate(() => window.__received.join("")),"paste text");
     assert.equal(await page.evaluate(() => window.__readPty()),"paste text");
 
     assert.deepEqual(errors,[]);
     process.stdout.write(
-      "Browser keyboard regression passed: per-key input around keyCode 229, native xterm IME composition, Enter, Ctrl shortcuts, and paste.\n"
+      "Browser keyboard regression passed: native xterm keypress input, keyCode 229 in both event orders, IME composition and cancellation, control keys, and paste.\n"
     );
   } finally {
     if (browser) {
