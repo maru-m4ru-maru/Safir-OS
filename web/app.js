@@ -17,6 +17,7 @@ let guestOutput="";
 let ptyMaster=null;
 let ptyActivated=false;
 let lastDependencyCount=-1;
+let terminalFocusedAtPrompt=false;
 
 const guestDecoder=new TextDecoder();
 
@@ -58,8 +59,8 @@ const terminal=new Terminal({
 
 terminal.open(terminalMount);
 
-const keyboardInput=window.SafirOSKeyboardInput
-  ?window.SafirOSKeyboardInput.install(terminal,{enabled:false})
+const inputCompatibility=window.SafirOSInputCompatibility
+  ?window.SafirOSInputCompatibility.install(terminal)
   :null;
 
 const originalTerminalWrite=terminal.write.bind(terminal);
@@ -73,9 +74,7 @@ terminal.write=function(data,onWrite){
 };
 
 terminalMount.addEventListener("mousedown",()=>{
-  if(keyboardInput&&keyboardInput.enabled){
-    keyboardInput.focus();
-  }
+  terminal.focus();
 });
 
 function setStatus(message){
@@ -112,9 +111,9 @@ function recordGuestOutput(data){
     setRuntimeState("Running","running");
   }
 
-  if(guestOutput.includes(shellPrompt)&&keyboardInput&&!keyboardInput.enabled){
-    keyboardInput.setEnabled(true);
-    requestAnimationFrame(()=>keyboardInput.focus());
+  if(guestOutput.includes(shellPrompt)&&!terminalFocusedAtPrompt){
+    terminalFocusedAtPrompt=true;
+    requestAnimationFrame(()=>terminal.focus());
   }
 }
 
@@ -242,10 +241,6 @@ async function boot(){
     setStatus("Enabling shared memory...");
     setProgress(2);
 
-    if(!keyboardInput){
-      throw new Error("Independent keyboard input bridge is unavailable");
-    }
-
     if(!window.COI_READY){
       throw new Error("Cross-origin isolation bootstrap is unavailable");
     }
@@ -322,8 +317,8 @@ async function boot(){
     setRuntimeState("Running","running");
     setStatus("SafirOS kernel reached Long Mode");
 
-    if(keyboardInput.enabled){
-      keyboardInput.focus();
+    if(guestOutput.includes(shellPrompt)){
+      terminal.focus();
     }
   }catch(error){
     appendSerial("\r\n[boot error] "+error.message+"\r\n");
