@@ -18,7 +18,6 @@
       !eventRoot ||
       typeof terminal.input !== "function" ||
       typeof terminal.onData !== "function" ||
-      typeof terminal.onKey !== "function" ||
       typeof terminal.attachCustomKeyEventHandler !== "function"
     ) {
       return null;
@@ -29,23 +28,10 @@
     }
 
     let composing = false;
+    let compositionPreview = "";
     let compositionCommitPending = false;
     let compositionCommitTimer = 0;
     let dataVersion = 0;
-    let lastTextareaValue = textarea.value;
-    let beforeInputValue = null;
-    let activeInputRecord = null;
-
-    const pendingKeys = [];
-    const pending229 = [];
-
-    const removePending = (items, item) => {
-      const index = items.indexOf(item);
-
-      if (index !== -1) {
-        items.splice(index, 1);
-      }
-    };
 
     const clearCompositionCommit = () => {
       compositionCommitPending = false;
@@ -60,32 +46,10 @@
       dataVersion++;
     });
 
-    const onKey = terminal.onKey(({key, domEvent}) => {
-      if (
-        !domEvent ||
-        (domEvent.type !== "keydown" && domEvent.type !== "keypress") ||
-        typeof key !== "string" ||
-        Array.from(key).length !== 1
-      ) {
-        return;
-      }
-
-      const pending = {key};
-      pendingKeys.push(pending);
-
-      setTimeout(() => {
-        removePending(pendingKeys, pending);
-      }, 120);
-    });
-
-    let compositionPreview = "";
-
     const onCompositionStart = () => {
       composing = true;
       compositionPreview = "";
       clearCompositionCommit();
-      beforeInputValue = null;
-      lastTextareaValue = textarea.value;
     };
 
     const onCompositionUpdate = event => {
@@ -117,12 +81,6 @@
       }, 0);
     };
 
-    const onBeforeInput = event => {
-      if (event.target === textarea) {
-        beforeInputValue = textarea.value;
-      }
-    };
-
     const onInput = event => {
       if (event.target !== textarea) {
         return;
@@ -136,130 +94,37 @@
         inputType.includes("composition") ||
         compositionCommitPending
       ) {
-        lastTextareaValue = textarea.value;
-        beforeInputValue = null;
         return;
       }
 
       if (
-        (inputType !== "inserttext" && inputType !== "insertreplacementtext") ||
-        typeof event.data !== "string" ||
-        event.data.length === 0
+        inputType !== "inserttext" &&
+        inputType !== "insertreplacementtext"
       ) {
-        lastTextareaValue = textarea.value;
-        beforeInputValue = null;
         return;
       }
 
-      const matchingKey = pendingKeys.find(
-        pending => pending.key === event.data
-      );
-
-      if (matchingKey) {
-        removePending(pendingKeys, matchingKey);
-        lastTextareaValue = textarea.value;
-        beforeInputValue = null;
+      if (typeof event.data !== "string" || event.data.length === 0) {
         return;
       }
 
       const versionBeforeInput = dataVersion;
       const inputData = event.data;
-      const pending229Index = pending229.findIndex(
-        pending => pending.key === inputData
-      );
-      const previousValueIndex = pending229.findIndex(
-        pending => pending.value === lastTextareaValue && pending.fallbackPending
-      );
-      const selected229Index = pending229Index !== -1
-        ? pending229Index
-        : previousValueIndex !== -1
-          ? previousValueIndex
-          : pending229.findIndex(pending => pending.fallbackPending);
-      const pending229Entry = selected229Index !== -1
-        ? pending229.splice(selected229Index, 1)[0]
-        : null;
-      const previousValue = pending229Entry
-        ? pending229Entry.value
-        : beforeInputValue !== null
-          ? beforeInputValue
-          : lastTextareaValue;
-      const inputRecord = {followedBy229:false};
-
-      activeInputRecord = inputRecord;
-      beforeInputValue = null;
 
       Promise.resolve().then(() => {
-        const xtermHandledInput = dataVersion !== versionBeforeInput;
-
-        if (!xtermHandledInput) {
+        if (dataVersion === versionBeforeInput) {
           terminal.input(inputData, true);
-        }
-
-        if (!xtermHandledInput || (pending229Entry && pending229Entry.fallbackPending)) {
-          textarea.value = previousValue;
-
-          if (typeof textarea.setSelectionRange === "function") {
-            try {
-              textarea.setSelectionRange(
-                previousValue.length,
-                previousValue.length
-              );
-            } catch {}
-          }
-
-          lastTextareaValue = previousValue;
-        } else {
-          lastTextareaValue = textarea.value;
-        }
-
-        if (activeInputRecord === inputRecord) {
-          activeInputRecord = null;
         }
       });
     };
 
     const customKeyEventHandler = event => {
-      if (event.type === "keyup") {
-        const index = pending229.findIndex(
-          pending =>
-            (pending.code && pending.code === event.code) ||
-            (pending.key && pending.key === event.key)
-        );
-
-        if (index !== -1) {
-          pending229.splice(index, 1);
-        }
-
-        return true;
-      }
-
       if (
         event.type === "keydown" &&
         event.keyCode === 229 &&
-        !composing &&
-        !compositionCommitPending
+        !composing
       ) {
-        if (activeInputRecord) {
-          activeInputRecord.followedBy229 = true;
-          return false;
-        }
-
-        const pending = {
-          key:event.key,
-          code:event.code,
-          value:textarea.value,
-          fallbackPending:true
-        };
-
-        pending229.push(pending);
-
-        setTimeout(() => {
-          pending.fallbackPending = false;
-        }, 10);
-
-        setTimeout(() => {
-          removePending(pending229, pending);
-        }, 120);
+        return false;
       }
 
       return true;
@@ -270,7 +135,6 @@
     eventRoot.addEventListener("compositionstart", onCompositionStart, true);
     eventRoot.addEventListener("compositionupdate", onCompositionUpdate, true);
     eventRoot.addEventListener("compositionend", onCompositionEnd, true);
-    eventRoot.addEventListener("beforeinput", onBeforeInput, true);
     eventRoot.addEventListener("input", onInput, true);
 
     return {
@@ -278,15 +142,10 @@
         eventRoot.removeEventListener("compositionstart", onCompositionStart, true);
         eventRoot.removeEventListener("compositionupdate", onCompositionUpdate, true);
         eventRoot.removeEventListener("compositionend", onCompositionEnd, true);
-        eventRoot.removeEventListener("beforeinput", onBeforeInput, true);
         eventRoot.removeEventListener("input", onInput, true);
 
         clearCompositionCommit();
-        pendingKeys.length = 0;
-        pending229.length = 0;
-
         onData.dispose();
-        onKey.dispose();
         terminal.attachCustomKeyEventHandler(() => true);
       }
     };
