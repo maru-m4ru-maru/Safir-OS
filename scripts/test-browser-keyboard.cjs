@@ -44,7 +44,11 @@ const html = [
   '    pty.slave.ioctl("TCSETS",termios);',
   "    window.__pty = pty.slave;",
   "    window.__terminal.loadAddon(pty.master);",
-  "    window.__terminal.onData(data => window.__received.push(data));",
+  "    window.__eventTrace = [];",
+  '    window.__terminal.textarea.addEventListener("keydown",event => window.__eventTrace.push(["keydown",event.key,event.keyCode,window.__terminal.textarea.value]),true);',
+  '    window.__terminal.textarea.addEventListener("keyup",event => window.__eventTrace.push(["keyup",event.key,event.keyCode,window.__terminal.textarea.value]),true);',
+  '    window.__terminal.textarea.addEventListener("input",event => window.__eventTrace.push(["input",event.data,event.inputType,window.__terminal.textarea.value]),true);',
+  "    window.__terminal.onData(data => { window.__received.push(data); window.__eventTrace.push(['onData',data]); });",
   "    window.__readPty = () => new TextDecoder().decode(Uint8Array.from(window.__pty.read()));",
   "    window.__clearReceived = () => { window.__received.length = 0; };",
   "    window.__dispatchKey = (key,options={}) => {",
@@ -159,14 +163,22 @@ async function main() {
 
     await page.evaluate(() => {
       window.__clearReceived();
+      window.__eventTrace.length = 0;
       const textarea = window.__terminal.textarea;
       textarea.value = "";
       window.__dispatchKey("Process",{keyCode:229,code:"KeyH"});
       window.__dispatchInput("h",{value:"h",inputType:"insertText",composed:true});
       window.__dispatchKeyUp("Process",{keyCode:229,code:"KeyH"});
     });
-    await page.waitForFunction(() => window.__received.join("") === "h");
-    assert.equal(await page.evaluate(() => window.__readPty()),"h");
+    await page.waitForTimeout(30);
+    const hDiagnostic = await page.evaluate(() => ({
+      received:window.__received.join(""),
+      pty:window.__readPty(),
+      textarea:window.__terminal.textarea.value,
+      trace:window.__eventTrace
+    }));
+    assert.equal(hDiagnostic.received,"h",JSON.stringify(hDiagnostic));
+    assert.equal(hDiagnostic.pty,"h",JSON.stringify(hDiagnostic));
 
     await page.evaluate(() => {
       const textarea = window.__terminal.textarea;
